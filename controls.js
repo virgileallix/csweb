@@ -214,6 +214,10 @@ class GameControls {
                 case 'KeyP':
                     this.pauseGame();
                     break;
+                
+                case 'KeyE':
+                    // Interaction avec la bombe (handled by bombSystem)
+                    break;
             }
         } else {
             // Actions dans le menu

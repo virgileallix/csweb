@@ -67,9 +67,15 @@ const CONFIG = {
 
     // Paramètres de jeu
     GAME: {
-        INITIAL_TIME: 180, // 3 minutes
+        INITIAL_TIME: 180, // 3 minutes pour le mode solo
+        ROUND_TIME: 115, // 1:55 pour le mode multijoueur
         ENEMY_COUNT: 5,
-        GRAVITY: -0.02
+        GRAVITY: -0.02,
+        MODE: 'classic', // classic, bomb_defusal
+        MAX_ROUNDS: 30, // Pour le mode multijoueur
+        BOMB_TIMER: 40, // Temps avant explosion de la bombe
+        PLANT_TIME: 4, // Temps pour planter
+        DEFUSE_TIME: 10 // Temps pour désamorcer (5 avec kit)
     },
 
     // Multiplicateurs de dégâts par zone

@@ -92,7 +92,13 @@ class Game {
     setupEnemies() {
         enemies = [];
         
-        // Sélectionner des positions de spawn aléatoires
+        // En mode multijoueur, les ennemis sont les autres joueurs
+        if (CONFIG.GAME.MODE === 'bomb_defusal') {
+            console.log('Mode multijoueur - pas d\'ennemis IA');
+            return;
+        }
+        
+        // Mode solo - créer des ennemis IA
         const shuffledPositions = [...this.spawnPositions].sort(() => Math.random() - 0.5);
         
         for (let i = 0; i < CONFIG.GAME.ENEMY_COUNT && i < shuffledPositions.length; i++) {
@@ -131,6 +137,11 @@ class Game {
         gameState.shotsFired = 0;
         gameState.shotsHit = 0;
         
+        // Initialiser le système de bombe si mode bomb_defusal
+        if (CONFIG.GAME.MODE === 'bomb_defusal') {
+            bombSystem = new BombSystem();
+        }
+        
         // Démarrer les boucles de jeu
         this.startUpdateLoop();
         
@@ -142,6 +153,79 @@ class Game {
         }, 100);
         
         console.log('Jeu démarré!');
+    }
+
+    // Nouvelle méthode pour démarrer une partie multijoueur
+    startMultiplayerRound(players, playerTeam) {
+        // Configuration multijoueur
+        CONFIG.GAME.MODE = 'bomb_defusal';
+        this.playerTeam = playerTeam;
+        this.multiplayerPlayers = players;
+        
+        // Position de spawn selon l'équipe
+        const spawnPositions = this.getTeamSpawnPositions();
+        const teamSpawns = playerTeam === 'CT' ? spawnPositions.ct : spawnPositions.t;
+        const randomSpawn = teamSpawns[Math.floor(Math.random() * teamSpawns.length)];
+        
+        camera.position.copy(randomSpawn);
+        
+        // Initialiser le système de bombe
+        if (!bombSystem) {
+            bombSystem = new BombSystem();
+        }
+        
+        // Créer les bots pour remplir les équipes
+        this.createTeamBots(players);
+        
+        console.log(`Round multijoueur démarré - Équipe: ${playerTeam}`);
+    }
+
+    getTeamSpawnPositions() {
+        return {
+            ct: [
+                new THREE.Vector3(-20, 1.6, -20),
+                new THREE.Vector3(-18, 1.6, -22),
+                new THREE.Vector3(-22, 1.6, -18),
+                new THREE.Vector3(-19, 1.6, -19),
+                new THREE.Vector3(-21, 1.6, -21)
+            ],
+            t: [
+                new THREE.Vector3(20, 1.6, 20),
+                new THREE.Vector3(18, 1.6, 22),
+                new THREE.Vector3(22, 1.6, 18),
+                new THREE.Vector3(19, 1.6, 19),
+                new THREE.Vector3(21, 1.6, 21)
+            ]
+        };
+    }
+
+    createTeamBots(players) {
+        const spawnPositions = this.getTeamSpawnPositions();
+        
+        Object.entries(players).forEach(([playerId, playerData]) => {
+            if (playerData.isBot && playerId !== multiplayer.playerId) {
+                // Créer un bot pour ce joueur
+                const teamSpawns = playerData.team === 'CT' ? spawnPositions.ct : spawnPositions.t;
+                const randomSpawn = teamSpawns[Math.floor(Math.random() * teamSpawns.length)];
+                
+                const bot = new Enemy(randomSpawn, playerData.team === 'T' ? 'terrorist' : 'counter_terrorist');
+                bot.isMultiplayerBot = true;
+                bot.playerId = playerId;
+                bot.playerName = playerData.name;
+                bot.team = playerData.team;
+                
+                // Différencier visuellement selon l'équipe
+                if (playerData.team === 'CT') {
+                    bot.mesh.material.color.setHex(0x4CAF50); // Vert pour CT
+                } else {
+                    bot.mesh.material.color.setHex(0xF44336); // Rouge pour T
+                }
+                
+                enemies.push(bot);
+            }
+        });
+        
+        console.log(`${enemies.length} bots créés pour le multijoueur`);
     }
 
     startUpdateLoop() {
@@ -174,6 +258,11 @@ class Game {
         
         // Mise à jour des balles
         this.updateBullets(deltaTime);
+        
+        // Mise à jour du système de bombe
+        if (bombSystem) {
+            bombSystem.update();
+        }
         
         // Vérification des conditions de victoire/défaite
         this.checkGameState();
@@ -211,6 +300,13 @@ class Game {
     }
 
     checkGameState() {
+        // Mode multijoueur - conditions différentes
+        if (CONFIG.GAME.MODE === 'bomb_defusal') {
+            // Les conditions de fin sont gérées par le système multijoueur
+            return;
+        }
+        
+        // Mode solo classique
         // Vérification de la victoire
         if (enemies.length === 0) {
             this.victory();
@@ -466,9 +562,27 @@ class Game {
         enemies.forEach(enemy => enemy.destroy());
         enemies.length = 0;
         
+        // Nettoyer le système de bombe
+        if (bombSystem) {
+            bombSystem.destroy();
+            bombSystem = null;
+        }
+        
+        // Nettoyer les éléments UI multijoueur
+        const elementsToRemove = [
+            'bombStatus', 'matchScore', 'bombUI', 
+            'bombTimer', 'scoreboard', 'pauseMenu'
+        ];
+        
+        elementsToRemove.forEach(id => {
+            const element = document.getElementById(id);
+            if (element) element.remove();
+        });
+        
         // Réinitialiser les variables globales
         gameRunning = false;
         gameTime = CONFIG.GAME.INITIAL_TIME;
+        CONFIG.GAME.MODE = 'classic';
     }
 
     // Méthodes utilitaires

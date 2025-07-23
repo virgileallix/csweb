@@ -323,29 +323,175 @@ body {
     100% { opacity: 1; }
 }
 
-/* Styles responsive */
-@media (max-width: 768px) {
-    #menu h1 {
-        font-size: 36px;
+/* Styles multijoueur */
+#matchScore {
+    position: absolute;
+    top: 30px;
+    right: 200px;
+    background: rgba(0,0,0,0.8);
+    padding: 10px;
+    border-radius: 5px;
+    color: white;
+    font-size: 16px;
+    text-align: center;
+    z-index: 1500;
+    border: 2px solid #333;
+}
+
+#bombStatus {
+    position: absolute;
+    top: 100px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.8);
+    padding: 10px;
+    border-radius: 5px;
+    color: white;
+    font-size: 18px;
+    text-align: center;
+    z-index: 1500;
+    border: 2px solid #ff0000;
+}
+
+#bombUI {
+    position: absolute;
+    bottom: 200px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.9);
+    padding: 20px;
+    border-radius: 10px;
+    color: white;
+    text-align: center;
+    z-index: 1500;
+    min-width: 300px;
+    border: 2px solid #ffff00;
+}
+
+#bombTimer {
+    position: absolute;
+    top: 150px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(255,0,0,0.9);
+    padding: 15px 25px;
+    border-radius: 10px;
+    color: white;
+    font-size: 24px;
+    font-weight: bold;
+    text-align: center;
+    z-index: 1500;
+    animation: pulse 1s infinite;
+}
+
+/* Animations pour les messages */
+@keyframes messageSlide {
+    0% { 
+        opacity: 0; 
+        transform: translate(-50%, -50%) scale(0.5); 
     }
-    
-    #menu button {
-        padding: 12px 25px;
-        font-size: 16px;
+    10% { 
+        opacity: 1; 
+        transform: translate(-50%, -50%) scale(1.1); 
     }
-    
-    #healthBar, #ammoCounter {
-        font-size: 16px;
-        padding: 10px;
+    90% { 
+        opacity: 1; 
+        transform: translate(-50%, -50%) scale(1); 
     }
-    
-    #gameStatus {
-        font-size: 16px;
-        padding: 12px 20px;
+    100% { 
+        opacity: 0; 
+        transform: translate(-50%, -50%) scale(0.9); 
     }
 }
 
-/* Curseur personnalisé quand le jeu n'est pas actif */
-body:not(.game-active) {
-    cursor: crosshair;
+@keyframes explosionFlash {
+    0% { opacity: 1; }
+    100% { opacity: 0; }
+}
+
+@keyframes successFlash {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+    50% { opacity: 1; transform: translate(-50%, -50%) scale(2); }
+    100% { opacity: 0; transform: translate(-50%, -50%) scale(3); }
+}
+
+/* Lobby styles */
+.lobby-player {
+    padding: 5px;
+    margin: 2px 0;
+    background: rgba(255,255,255,0.1);
+    border-radius: 3px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.team-ct {
+    background: rgba(76,175,80,0.1);
+}
+
+.team-t {
+    background: rgba(244,67,54,0.1);
+}
+
+.player-ready {
+    color: #4CAF50;
+}
+
+.player-not-ready {
+    color: #F44336;
+}
+
+/* Effets spéciaux multijoueur */
+.bomb-flash {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: radial-gradient(circle, rgba(255,255,255,0.8), rgba(255,100,0,0.3));
+    pointer-events: none;
+    z-index: 2000;
+    animation: explosionFlash 0.5s ease-out forwards;
+}
+
+.round-win-message {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0,0,0,0.95);
+    color: white;
+    padding: 30px 50px;
+    border-radius: 15px;
+    font-size: 28px;
+    font-weight: bold;
+    text-align: center;
+    z-index: 2500;
+    animation: messageSlide 4s ease-out forwards;
+    border: 3px solid #ffff00;
+}
+
+/* Indicateurs d'équipe */
+.team-indicator {
+    position: absolute;
+    top: 30px;
+    left: 30px;
+    background: rgba(0,0,0,0.8);
+    padding: 10px 15px;
+    border-radius: 5px;
+    color: white;
+    font-size: 16px;
+    font-weight: bold;
+    z-index: 1500;
+}
+
+.team-ct .team-indicator {
+    border: 2px solid #4CAF50;
+    color: #4CAF50;
+}
+
+.team-t .team-indicator {
+    border: 2px solid #F44336;
+    color: #F44336;
 }
