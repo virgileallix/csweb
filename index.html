@@ -3,63 +3,109 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mini CSGO: Web Strike</title>
-    <link rel="stylesheet" href="styles.css">
+    <title>Tactical Shooter 5v5</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div id="gameContainer">
-        <div id="menu">
-            <h1>MINI CSGO: WEB STRIKE</h1>
-            <button onclick="startGame()">COMMENCER LA PARTIE</button>
-            <button onclick="showInstructions()">INSTRUCTIONS</button>
-            <div id="instructions" style="display: none;">
-                <p><strong>CONTRÔLES:</strong></p>
-                <p>ZQSD - Déplacement | Souris - Viser/Tourner | Clic gauche - Tirer</p>
-                <p>1/2 - Changer d'arme | R - Recharger | Échap - Menu</p>
-                <p><strong>OBJECTIF:</strong> Éliminez tous les terroristes!</p>
-                <br>
-                <button onclick="hideInstructions()">RETOUR</button>
+    <!-- Menu principal -->
+    <div id="menuScreen" class="screen active">
+        <div class="container">
+            <h1 class="game-title">TACTICAL SHOOTER</h1>
+            <div class="menu-content">
+                <input type="text" id="playerName" placeholder="Entrez votre pseudo" class="input-field">
+                <button id="playBtn" class="btn btn-primary">JOUER</button>
             </div>
         </div>
+    </div>
 
-        <div id="hud" style="display: none;">
-            <div id="crosshair"></div>
-            <div id="healthBar">
-                <div>❤️ SANTÉ: <span id="healthValue">100</span></div>
-                <div>🛡️ GILET: <span id="armorValue">100</span></div>
+    <!-- Écran des lobbys -->
+    <div id="lobbyScreen" class="screen">
+        <div class="container">
+            <div class="header">
+                <h2>Lobbys</h2>
+                <span id="playerInfo" class="player-info"></span>
             </div>
-            <div id="ammoCounter">
-                <div><span id="currentAmmo">30</span> / <span id="reserveAmmo">90</span></div>
+            
+            <div class="lobby-actions">
+                <button id="createLobbyBtn" class="btn btn-secondary">Créer un Lobby</button>
+                <button id="refreshLobbiesBtn" class="btn btn-secondary">Rafraîchir</button>
             </div>
-            <div id="weaponInfo">
-                <span id="weaponName">AK-47</span>
+
+            <div id="lobbyList" class="lobby-list">
+                <!-- Les lobbys seront affichés ici -->
             </div>
-            <div id="gameStatus">
-                <div>TERRORISTES: <span id="enemyCount">5</span></div>
-                <div>TEMPS: <span id="timeLeft">180</span>s</div>
+        </div>
+    </div>
+
+    <!-- Salle d'attente -->
+    <div id="waitingRoom" class="screen">
+        <div class="container">
+            <h2>Salle d'attente</h2>
+            <div class="room-info">
+                <p>Code du lobby: <span id="lobbyCode" class="code"></span></p>
+                <p>Joueurs: <span id="playerCount">1/10</span></p>
             </div>
-            <canvas id="miniMap"></canvas>
+
+            <div class="teams">
+                <div class="team team-ct">
+                    <h3>Équipe CT (Anti-Terroristes)</h3>
+                    <div id="teamCT" class="player-list"></div>
+                </div>
+                <div class="team team-t">
+                    <h3>Équipe T (Terroristes)</h3>
+                    <div id="teamT" class="player-list"></div>
+                </div>
+            </div>
+
+            <div class="room-actions">
+                <button id="switchTeamBtn" class="btn btn-secondary">Changer d'équipe</button>
+                <button id="startGameBtn" class="btn btn-primary" style="display: none;">Lancer la partie</button>
+                <button id="leaveLobbyBtn" class="btn btn-danger">Quitter</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Écran de jeu -->
+    <div id="gameScreen" class="screen">
+        <div class="game-container">
+            <!-- HUD -->
+            <div class="hud">
+                <div class="hud-top">
+                    <div class="team-score">
+                        <span class="ct-score">CT: <span id="ctScore">0</span></span>
+                        <span class="timer" id="gameTimer">2:00</span>
+                        <span class="t-score">T: <span id="tScore">0</span></span>
+                    </div>
+                </div>
+                
+                <div class="hud-bottom">
+                    <div class="player-stats">
+                        <div class="health">HP: <span id="playerHealth">100</span></div>
+                        <div class="ammo">Munitions: <span id="playerAmmo">30/90</span></div>
+                    </div>
+                    <div class="bomb-status" id="bombStatus"></div>
+                </div>
+            </div>
+
+            <!-- Canvas du jeu -->
+            <canvas id="gameCanvas"></canvas>
+
+            <!-- Chat -->
+            <div class="chat-container">
+                <div id="chatMessages" class="chat-messages"></div>
+                <input type="text" id="chatInput" class="chat-input" placeholder="Appuyez sur Entrée pour chatter...">
+            </div>
         </div>
     </div>
 
     <!-- Firebase -->
-    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database-compat.js"></script>
-    
-    <!-- Three.js -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     
     <!-- Scripts du jeu -->
-    <script src="config.js"></script>
-    <script src="firebase-config.js"></script>
-    <script src="network-utils.js"></script>
-    <script src="bullet.js"></script>
-    <script src="player.js"></script>
-    <script src="enemy.js"></script>
-    <script src="map.js"></script>
-    <script src="bomb.js"></script>
-    <script src="controls.js"></script>
+    <script src="firebase-manager.js"></script>
+    <script src="menu.js"></script>
     <script src="game.js"></script>
+    <script src="main.js"></script>
 </body>
 </html>

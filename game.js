@@ -1,710 +1,756 @@
+// Classe principale du jeu
 class Game {
     constructor() {
-        this.isInitialized = false;
-        this.gameTimer = null;
-        this.updateLoop = null;
-        this.spawnPositions = [];
+        this.canvas = document.getElementById('gameCanvas');
+        this.ctx = this.canvas.getContext('2d');
         
-        // Statistiques de performance
-        this.fps = 0;
-        this.lastFpsUpdate = 0;
-        this.frameCount = 0;
-    }
-
-    init() {
-        if (this.isInitialized) return;
-
-        console.log('Initialisation du jeu...');
+        this.players = {};
+        this.localPlayer = null;
+        this.lobbyData = null;
+        this.gameState = null;
         
-        this.setupScene();
-        this.setupRenderer();
-        this.setupCamera();
-        this.setupWorld();
-        this.setupPlayer();
-        this.setupEnemies();
-        this.setupUI();
+        this.keys = {};
+        this.mouse = { x: 0, y: 0 };
         
-        // Initialisation des contrôles
-        gameControls = new GameControls();
-        
-        this.isInitialized = true;
-        console.log('Jeu initialisé avec succès!');
-    }
-
-    setupScene() {
-        scene = new THREE.Scene();
-        scene.fog = new THREE.Fog(0x404040, 20, 100);
-        scene.background = new THREE.Color(CONFIG.COLORS.SKY);
-    }
-
-    setupRenderer() {
-        renderer = new THREE.WebGLRenderer({ 
-            antialias: true,
-            powerPreference: "high-performance",
-            stencil: false,
-            depth: true
-        });
-        
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        renderer.setClearColor(CONFIG.COLORS.SKY);
-        
-        // Configuration des ombres
-        renderer.shadowMap.enabled = true;
-        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-        renderer.shadowMap.autoUpdate = true;
-        
-        // Optimisations
-        renderer.outputEncoding = THREE.sRGBEncoding;
-        renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        renderer.toneMappingExposure = 1.2;
-        
-        document.getElementById('gameContainer').appendChild(renderer.domElement);
-    }
-
-    setupCamera() {
-        camera = new THREE.PerspectiveCamera(
-            75, // FOV
-            window.innerWidth / window.innerHeight, // Aspect ratio
-            0.1, // Near plane
-            200 // Far plane
-        );
-        
-        camera.position.set(0, CONFIG.PLAYER.HEIGHT, 0);
-        camera.rotation.order = 'YXZ';
-        
-        // Réinitialisation des rotations
-        mouseX = 0;
-        mouseY = 0;
-    }
-
-    setupWorld() {
-        console.log('Génération de la carte...');
-        this.spawnPositions = createMap();
-        console.log(`Carte créée avec ${this.spawnPositions.length} positions de spawn`);
-    }
-
-    setupPlayer() {
-        player = new Player();
-        console.log('Joueur initialisé');
-    }
-
-    setupEnemies() {
-        enemies = [];
-        
-        // En mode multijoueur, les ennemis sont les autres joueurs
-        if (CONFIG.GAME.MODE === 'bomb_defusal') {
-            console.log('Mode multijoueur - pas d\'ennemis IA');
-            return;
-        }
-        
-        // Mode solo - créer des ennemis IA
-        const shuffledPositions = [...this.spawnPositions].sort(() => Math.random() - 0.5);
-        
-        for (let i = 0; i < CONFIG.GAME.ENEMY_COUNT && i < shuffledPositions.length; i++) {
-            const enemyType = Math.random() < 0.7 ? 'terrorist' : 'sniper';
-            const enemy = new Enemy(shuffledPositions[i], enemyType);
-            enemies.push(enemy);
-        }
-        
-        console.log(`${enemies.length} ennemis créés`);
-        this.updateEnemyCount();
-    }
-
-    setupUI() {
-        this.updateGameStatus();
-        this.setupMiniMap();
-        this.startGameTimer();
-    }
-
-    start() {
-        if (!this.isInitialized) {
-            this.init();
-        }
-
-        // Masquer le menu, afficher le HUD
-        document.getElementById('menu').style.display = 'none';
-        document.getElementById('hud').style.display = 'block';
-        
-        // Démarrer le jeu
-        gameRunning = true;
-        gameTime = CONFIG.GAME.INITIAL_TIME;
-        
-        // Réinitialiser les statistiques
-        gameState.score = 0;
-        gameState.kills = 0;
-        gameState.accuracy = 0;
-        gameState.shotsFired = 0;
-        gameState.shotsHit = 0;
-        
-        // Initialiser le système de bombe si mode bomb_defusal
-        if (CONFIG.GAME.MODE === 'bomb_defusal') {
-            bombSystem = new BombSystem();
-        }
-        
-        // Démarrer les boucles de jeu
-        this.startUpdateLoop();
-        
-        // Demander le verrouillage de la souris
-        setTimeout(() => {
-            if (gameControls) {
-                gameControls.requestPointerLock();
-            }
-        }, 100);
-        
-        console.log('Jeu démarré!');
-    }
-
-    // Nouvelle méthode pour démarrer une partie multijoueur
-    startMultiplayerRound(players, playerTeam) {
-        // Configuration multijoueur
-        CONFIG.GAME.MODE = 'bomb_defusal';
-        this.playerTeam = playerTeam;
-        this.multiplayerPlayers = players;
-        
-        // Position de spawn selon l'équipe
-        const spawnPositions = this.getTeamSpawnPositions();
-        const teamSpawns = playerTeam === 'CT' ? spawnPositions.ct : spawnPositions.t;
-        const randomSpawn = teamSpawns[Math.floor(Math.random() * teamSpawns.length)];
-        
-        camera.position.copy(randomSpawn);
-        
-        // Initialiser le système de bombe
-        if (!bombSystem) {
-            bombSystem = new BombSystem();
-        }
-        
-        // Créer les bots pour remplir les équipes
-        this.createTeamBots(players);
-        
-        console.log(`Round multijoueur démarré - Équipe: ${playerTeam}`);
-    }
-
-    getTeamSpawnPositions() {
-        return {
-            ct: [
-                new THREE.Vector3(-20, 1.6, -20),
-                new THREE.Vector3(-18, 1.6, -22),
-                new THREE.Vector3(-22, 1.6, -18),
-                new THREE.Vector3(-19, 1.6, -19),
-                new THREE.Vector3(-21, 1.6, -21)
-            ],
-            t: [
-                new THREE.Vector3(20, 1.6, 20),
-                new THREE.Vector3(18, 1.6, 22),
-                new THREE.Vector3(22, 1.6, 18),
-                new THREE.Vector3(19, 1.6, 19),
-                new THREE.Vector3(21, 1.6, 21)
+        this.map = {
+            width: 1600,
+            height: 900,
+            bombSites: {
+                A: { x: 400, y: 200, width: 150, height: 150 },
+                B: { x: 1050, y: 650, width: 150, height: 150 }
+            },
+            spawnPoints: {
+                CT: [
+                    { x: 100, y: 450 },
+                    { x: 150, y: 400 },
+                    { x: 150, y: 500 },
+                    { x: 200, y: 450 },
+                    { x: 100, y: 550 }
+                ],
+                T: [
+                    { x: 1400, y: 450 },
+                    { x: 1450, y: 400 },
+                    { x: 1450, y: 500 },
+                    { x: 1500, y: 450 },
+                    { x: 1400, y: 550 }
+                ]
+            },
+            obstacles: [
+                // Murs extérieurs
+                { x: 0, y: 0, width: 1600, height: 20 },
+                { x: 0, y: 880, width: 1600, height: 20 },
+                { x: 0, y: 0, width: 20, height: 900 },
+                { x: 1580, y: 0, width: 20, height: 900 },
+                
+                // Obstacles intérieurs
+                { x: 300, y: 100, width: 300, height: 20 },
+                { x: 300, y: 100, width: 20, height: 200 },
+                { x: 580, y: 100, width: 20, height: 200 },
+                
+                { x: 950, y: 550, width: 300, height: 20 },
+                { x: 950, y: 550, width: 20, height: 200 },
+                { x: 1230, y: 550, width: 20, height: 200 },
+                
+                // Couvertures au milieu
+                { x: 700, y: 400, width: 200, height: 100 },
+                { x: 500, y: 500, width: 100, height: 50 },
+                { x: 1000, y: 350, width: 100, height: 50 }
             ]
         };
+        
+        this.camera = { x: 0, y: 0 };
+        this.bombTimer = null;
+        this.defuseTimer = null;
+        this.roundTimer = null;
+        
+        this.initializeCanvas();
+        this.initializeEventListeners();
     }
 
-    createTeamBots(players) {
-        const spawnPositions = this.getTeamSpawnPositions();
-        
-        Object.entries(players).forEach(([playerId, playerData]) => {
-            if (playerData.isBot && playerId !== multiplayer.playerId) {
-                // Créer un bot pour ce joueur
-                const teamSpawns = playerData.team === 'CT' ? spawnPositions.ct : spawnPositions.t;
-                const randomSpawn = teamSpawns[Math.floor(Math.random() * teamSpawns.length)];
-                
-                const bot = new Enemy(randomSpawn, playerData.team === 'T' ? 'terrorist' : 'counter_terrorist');
-                bot.isMultiplayerBot = true;
-                bot.playerId = playerId;
-                bot.playerName = playerData.name;
-                bot.team = playerData.team;
-                
-                // Différencier visuellement selon l'équipe
-                if (playerData.team === 'CT') {
-                    bot.mesh.material.color.setHex(0x4CAF50); // Vert pour CT
-                } else {
-                    bot.mesh.material.color.setHex(0xF44336); // Rouge pour T
-                }
-                
-                enemies.push(bot);
+    // Initialise le canvas
+    initializeCanvas() {
+        this.resizeCanvas();
+        window.addEventListener('resize', () => this.resizeCanvas());
+    }
+
+    // Redimensionne le canvas
+    resizeCanvas() {
+        this.canvas.width = window.innerWidth;
+        this.canvas.height = window.innerHeight;
+    }
+
+    // Initialise les écouteurs d'événements
+    initializeEventListeners() {
+        // Clavier
+        window.addEventListener('keydown', (e) => {
+            this.keys[e.key.toLowerCase()] = true;
+            
+            // Empêche le défilement avec les flèches
+            if(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) {
+                e.preventDefault();
             }
         });
         
-        console.log(`${enemies.length} bots créés pour le multijoueur`);
+        window.addEventListener('keyup', (e) => {
+            this.keys[e.key.toLowerCase()] = false;
+        });
+        
+        // Souris
+        this.canvas.addEventListener('mousemove', (e) => {
+            this.mouse.x = e.clientX;
+            this.mouse.y = e.clientY;
+        });
+        
+        this.canvas.addEventListener('mousedown', (e) => {
+            if (e.button === 0) { // Clic gauche
+                this.shoot();
+            }
+        });
+        
+        // Actions spéciales
+        window.addEventListener('keypress', (e) => {
+            if (e.key.toLowerCase() === 'e') {
+                this.interact();
+            }
+            if (e.key.toLowerCase() === 'b') {
+                this.buyMenu();
+            }
+        });
     }
 
-    startUpdateLoop() {
-        lastFrameTime = performance.now();
+    // Initialise le jeu avec les données du lobby
+    initialize(lobbyData) {
+        this.lobbyData = lobbyData;
+        this.gameState = lobbyData.gameState;
         
-        const gameLoop = (currentTime) => {
-            if (!gameRunning) return;
+        // Crée les joueurs
+        Object.entries(lobbyData.players).forEach(([id, playerData]) => {
+            const spawnPoints = this.map.spawnPoints[playerData.team];
+            const spawnIndex = Object.keys(this.players).filter(
+                pid => this.players[pid].team === playerData.team
+            ).length;
+            const spawn = spawnPoints[spawnIndex % spawnPoints.length];
             
-            const deltaTime = (currentTime - lastFrameTime) / 1000;
-            lastFrameTime = currentTime;
+            this.players[id] = {
+                id: id,
+                name: playerData.name,
+                team: playerData.team,
+                x: spawn.x,
+                y: spawn.y,
+                angle: 0,
+                health: 100,
+                armor: playerData.team === 'CT' ? 100 : 0,
+                money: 800,
+                alive: true,
+                weapon: 'pistol',
+                ammo: 12,
+                ammoReserve: 24,
+                speed: 250,
+                hasBomb: id === this.gameState.bombCarrier,
+                isDefusing: false
+            };
             
-            this.update(deltaTime);
+            if (id === firebaseManager.currentUser.id) {
+                this.localPlayer = this.players[id];
+            }
+        });
+        
+        // Lance la boucle de jeu
+        this.startGameLoop();
+        this.startRoundTimer();
+        
+        // Écoute les mises à jour du jeu
+        this.listenToGameUpdates();
+    }
+
+    // Écoute les mises à jour du jeu
+    listenToGameUpdates() {
+        // Écoute les positions des joueurs
+        database.ref(`lobbies/${firebaseManager.currentLobby}/players`).on('value', (snapshot) => {
+            if (snapshot.exists()) {
+                const playersData = snapshot.val();
+                Object.entries(playersData).forEach(([id, data]) => {
+                    if (id !== firebaseManager.currentUser.id && this.players[id]) {
+                        if (data.position) {
+                            this.players[id].x = data.position.x;
+                            this.players[id].y = data.position.y;
+                            this.players[id].angle = data.position.angle;
+                        }
+                        if (data.state) {
+                            Object.assign(this.players[id], data.state);
+                        }
+                    }
+                });
+            }
+        });
+        
+        // Écoute l'état du jeu
+        database.ref(`lobbies/${firebaseManager.currentLobby}/gameState`).on('value', (snapshot) => {
+            if (snapshot.exists()) {
+                this.gameState = snapshot.val();
+                this.updateHUD();
+                
+                // Gère les événements de la bombe
+                if (this.gameState.bombPlanted && !this.bombTimer) {
+                    this.startBombTimer();
+                }
+                if (this.gameState.bombDefused || this.gameState.bombExploded) {
+                    this.endRound();
+                }
+            }
+        });
+    }
+
+    // Boucle principale du jeu
+    startGameLoop() {
+        const gameLoop = () => {
+            this.update();
             this.render();
-            this.updateFPS(currentTime);
-            
-            this.updateLoop = requestAnimationFrame(gameLoop);
+            requestAnimationFrame(gameLoop);
         };
-        
-        this.updateLoop = requestAnimationFrame(gameLoop);
+        gameLoop();
     }
 
-    update(deltaTime) {
-        // Mise à jour du joueur
-        if (player) {
-            player.update(deltaTime);
+    // Met à jour le jeu
+    update() {
+        if (!this.localPlayer || !this.localPlayer.alive) return;
+        
+        const deltaTime = 1/60; // 60 FPS
+        let dx = 0, dy = 0;
+        
+        // Gestion du mouvement
+        if (this.keys['w'] || this.keys['arrowup']) dy = -1;
+        if (this.keys['s'] || this.keys['arrowdown']) dy = 1;
+        if (this.keys['a'] || this.keys['arrowleft']) dx = -1;
+        if (this.keys['d'] || this.keys['arrowright']) dx = 1;
+        
+        // Normalise le vecteur de mouvement
+        if (dx !== 0 || dy !== 0) {
+            const length = Math.sqrt(dx * dx + dy * dy);
+            dx /= length;
+            dy /= length;
         }
         
-        // Mise à jour des ennemis
-        enemies.forEach(enemy => enemy.update(deltaTime));
+        // Applique le mouvement avec détection de collision
+        const speed = this.keys['shift'] ? this.localPlayer.speed * 0.5 : this.localPlayer.speed;
+        const newX = this.localPlayer.x + dx * speed * deltaTime;
+        const newY = this.localPlayer.y + dy * speed * deltaTime;
         
-        // Mise à jour des balles
-        this.updateBullets(deltaTime);
-        
-        // Mise à jour du système de bombe
-        if (bombSystem) {
-            bombSystem.update();
+        if (!this.checkCollision(newX, newY, 15)) {
+            this.localPlayer.x = newX;
+            this.localPlayer.y = newY;
         }
         
-        // Vérification des conditions de victoire/défaite
-        this.checkGameState();
+        // Calcule l'angle de vue vers la souris
+        const centerX = this.canvas.width / 2;
+        const centerY = this.canvas.height / 2;
+        this.localPlayer.angle = Math.atan2(
+            this.mouse.y - centerY,
+            this.mouse.x - centerX
+        );
+        
+        // Met à jour la caméra
+        this.camera.x = this.localPlayer.x - this.canvas.width / 2;
+        this.camera.y = this.localPlayer.y - this.canvas.height / 2;
+        
+        // Envoie la position au serveur
+        firebaseManager.updatePlayerPosition(
+            this.localPlayer.x,
+            this.localPlayer.y,
+            this.localPlayer.angle
+        );
     }
 
-    updateBullets(deltaTime) {
-        for (let i = bullets.length - 1; i >= 0; i--) {
-            const bullet = bullets[i];
-            
-            if (!bullet.update(deltaTime)) {
-                bullet.destroy();
+    // Vérifie les collisions
+    checkCollision(x, y, radius) {
+        // Vérifie les limites de la carte
+        if (x - radius < 0 || x + radius > this.map.width ||
+            y - radius < 0 || y + radius > this.map.height) {
+            return true;
+        }
+        
+        // Vérifie les obstacles
+        for (const obstacle of this.map.obstacles) {
+            if (x + radius > obstacle.x &&
+                x - radius < obstacle.x + obstacle.width &&
+                y + radius > obstacle.y &&
+                y - radius < obstacle.y + obstacle.height) {
+                return true;
             }
         }
+        
+        return false;
     }
 
+    // Affiche le jeu
     render() {
-        if (renderer && scene && camera) {
-            renderer.render(scene, camera);
+        // Efface le canvas
+        this.ctx.fillStyle = '#1a1a1a';
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        
+        // Sauvegarde le contexte
+        this.ctx.save();
+        
+        // Applique la translation de la caméra
+        this.ctx.translate(-this.camera.x, -this.camera.y);
+        
+        // Dessine la carte
+        this.renderMap();
+        
+        // Dessine les joueurs
+        this.renderPlayers();
+        
+        // Dessine les effets
+        this.renderEffects();
+        
+        // Restaure le contexte
+        this.ctx.restore();
+        
+        // Dessine l'interface (pas affectée par la caméra)
+        this.renderUI();
+    }
+
+    // Dessine la carte
+    renderMap() {
+        // Sol
+        this.ctx.fillStyle = '#2a2a2a';
+        this.ctx.fillRect(0, 0, this.map.width, this.map.height);
+        
+        // Grille
+        this.ctx.strokeStyle = '#333';
+        this.ctx.lineWidth = 1;
+        for (let x = 0; x <= this.map.width; x += 50) {
+            this.ctx.beginPath();
+            this.ctx.moveTo(x, 0);
+            this.ctx.lineTo(x, this.map.height);
+            this.ctx.stroke();
+        }
+        for (let y = 0; y <= this.map.height; y += 50) {
+            this.ctx.beginPath();
+            this.ctx.moveTo(0, y);
+            this.ctx.lineTo(this.map.width, y);
+            this.ctx.stroke();
+        }
+        
+        // Sites de bombe
+        Object.entries(this.map.bombSites).forEach(([site, area]) => {
+            this.ctx.fillStyle = 'rgba(255, 255, 0, 0.2)';
+            this.ctx.fillRect(area.x, area.y, area.width, area.height);
+            this.ctx.strokeStyle = '#ffff00';
+            this.ctx.lineWidth = 2;
+            this.ctx.strokeRect(area.x, area.y, area.width, area.height);
+            
+            // Texte du site
+            this.ctx.fillStyle = '#ffff00';
+            this.ctx.font = 'bold 48px Arial';
+            this.ctx.textAlign = 'center';
+            this.ctx.textBaseline = 'middle';
+            this.ctx.fillText(site, area.x + area.width/2, area.y + area.height/2);
+        });
+        
+        // Obstacles
+        this.ctx.fillStyle = '#444';
+        this.map.obstacles.forEach(obstacle => {
+            this.ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+        });
+        
+        // Bombe plantée
+        if (this.gameState && this.gameState.bombPlanted) {
+            const site = this.map.bombSites[this.gameState.bombSite];
+            this.ctx.fillStyle = '#ff0000';
+            this.ctx.beginPath();
+            this.ctx.arc(
+                site.x + site.width/2,
+                site.y + site.height/2,
+                20,
+                0,
+                Math.PI * 2
+            );
+            this.ctx.fill();
+            
+            // Animation de pulsation
+            const pulse = Math.sin(Date.now() * 0.01) * 0.2 + 0.8;
+            this.ctx.fillStyle = `rgba(255, 0, 0, ${pulse})`;
+            this.ctx.beginPath();
+            this.ctx.arc(
+                site.x + site.width/2,
+                site.y + site.height/2,
+                30,
+                0,
+                Math.PI * 2
+            );
+            this.ctx.fill();
         }
     }
 
-    updateFPS(currentTime) {
-        this.frameCount++;
-        
-        if (currentTime - this.lastFpsUpdate >= 1000) {
-            this.fps = Math.round((this.frameCount * 1000) / (currentTime - this.lastFpsUpdate));
-            this.frameCount = 0;
-            this.lastFpsUpdate = currentTime;
+    // Dessine les joueurs
+    renderPlayers() {
+        Object.values(this.players).forEach(player => {
+            if (!player.alive) return;
             
-            // Affichage optionnel du FPS (pour debug)
-            if (this.fps < 30) {
-                console.warn(`FPS bas détecté: ${this.fps}`);
+            // Corps du joueur
+            this.ctx.fillStyle = player.team === 'CT' ? '#5d79ae' : '#de9b35';
+            this.ctx.beginPath();
+            this.ctx.arc(player.x, player.y, 15, 0, Math.PI * 2);
+            this.ctx.fill();
+            
+            // Direction de vue
+            this.ctx.strokeStyle = this.ctx.fillStyle;
+            this.ctx.lineWidth = 3;
+            this.ctx.beginPath();
+            this.ctx.moveTo(player.x, player.y);
+            this.ctx.lineTo(
+                player.x + Math.cos(player.angle) * 25,
+                player.y + Math.sin(player.angle) * 25
+            );
+            this.ctx.stroke();
+            
+            // Nom du joueur
+            this.ctx.fillStyle = '#ffffff';
+            this.ctx.font = '12px Arial';
+            this.ctx.textAlign = 'center';
+            this.ctx.textBaseline = 'bottom';
+            this.ctx.fillText(player.name, player.x, player.y - 20);
+            
+            // Barre de vie
+            const barWidth = 30;
+            const barHeight = 4;
+            const barY = player.y - 30;
+            
+            this.ctx.fillStyle = '#333';
+            this.ctx.fillRect(player.x - barWidth/2, barY, barWidth, barHeight);
+            
+            this.ctx.fillStyle = player.health > 50 ? '#4caf50' : '#ff4444';
+            this.ctx.fillRect(
+                player.x - barWidth/2,
+                barY,
+                (player.health / 100) * barWidth,
+                barHeight
+            );
+            
+            // Indicateur de bombe
+            if (player.hasBomb) {
+                this.ctx.fillStyle = '#ff0000';
+                this.ctx.font = 'bold 16px Arial';
+                this.ctx.fillText('💣', player.x, player.y - 35);
+            }
+        });
+    }
+
+    // Dessine les effets
+    renderEffects() {
+        // Peut être utilisé pour les balles, explosions, etc.
+    }
+
+    // Dessine l'interface utilisateur
+    renderUI() {
+        // Réticule
+        if (this.localPlayer && this.localPlayer.alive) {
+            this.ctx.strokeStyle = '#ffffff';
+            this.ctx.lineWidth = 2;
+            const size = 20;
+            const gap = 5;
+            
+            // Croix
+            this.ctx.beginPath();
+            this.ctx.moveTo(this.mouse.x - size, this.mouse.y);
+            this.ctx.lineTo(this.mouse.x - gap, this.mouse.y);
+            this.ctx.moveTo(this.mouse.x + gap, this.mouse.y);
+            this.ctx.lineTo(this.mouse.x + size, this.mouse.y);
+            this.ctx.moveTo(this.mouse.x, this.mouse.y - size);
+            this.ctx.lineTo(this.mouse.x, this.mouse.y - gap);
+            this.ctx.moveTo(this.mouse.x, this.mouse.y + gap);
+            this.ctx.lineTo(this.mouse.x, this.mouse.y + size);
+            this.ctx.stroke();
+        }
+        
+        // Minimap (simple)
+        const minimapSize = 200;
+        const minimapX = this.canvas.width - minimapSize - 20;
+        const minimapY = 20;
+        const scale = minimapSize / Math.max(this.map.width, this.map.height);
+        
+        // Fond de la minimap
+        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        this.ctx.fillRect(minimapX, minimapY, minimapSize, minimapSize);
+        
+        // Obstacles sur la minimap
+        this.ctx.fillStyle = '#666';
+        this.map.obstacles.forEach(obstacle => {
+            this.ctx.fillRect(
+                minimapX + obstacle.x * scale,
+                minimapY + obstacle.y * scale,
+                obstacle.width * scale,
+                obstacle.height * scale
+            );
+        });
+        
+        // Joueurs sur la minimap
+        Object.values(this.players).forEach(player => {
+            if (!player.alive) return;
+            
+            this.ctx.fillStyle = player.team === 'CT' ? '#5d79ae' : '#de9b35';
+            this.ctx.beginPath();
+            this.ctx.arc(
+                minimapX + player.x * scale,
+                minimapY + player.y * scale,
+                3,
+                0,
+                Math.PI * 2
+            );
+            this.ctx.fill();
+        });
+    }
+
+    // Met à jour le HUD
+    updateHUD() {
+        document.getElementById('ctScore').textContent = this.gameState.ctScore;
+        document.getElementById('tScore').textContent = this.gameState.tScore;
+        
+        if (this.localPlayer) {
+            document.getElementById('playerHealth').textContent = this.localPlayer.health;
+            document.getElementById('playerAmmo').textContent = 
+                `${this.localPlayer.ammo}/${this.localPlayer.ammoReserve}`;
+        }
+        
+        // Statut de la bombe
+        const bombStatus = document.getElementById('bombStatus');
+        if (this.gameState.bombPlanted) {
+            bombStatus.textContent = `Bombe plantée sur ${this.gameState.bombSite}`;
+            bombStatus.style.display = 'block';
+        } else if (this.localPlayer && this.localPlayer.hasBomb) {
+            bombStatus.textContent = 'Vous avez la bombe';
+            bombStatus.style.display = 'block';
+        } else {
+            bombStatus.style.display = 'none';
+        }
+    }
+
+    // Tire
+    shoot() {
+        if (!this.localPlayer || !this.localPlayer.alive || this.localPlayer.ammo <= 0) return;
+        
+        this.localPlayer.ammo--;
+        
+        // Calcule la trajectoire
+        const startX = this.localPlayer.x;
+        const startY = this.localPlayer.y;
+        const angle = this.localPlayer.angle;
+        
+        // Vérifie les collisions avec les joueurs
+        Object.values(this.players).forEach(player => {
+            if (player.id === this.localPlayer.id || !player.alive || 
+                player.team === this.localPlayer.team) return;
+            
+            // Calcule la distance du joueur à la ligne de tir
+            const dx = player.x - startX;
+            const dy = player.y - startY;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            
+            // Vérifie si le joueur est dans la direction du tir
+            const angleToPlayer = Math.atan2(dy, dx);
+            const angleDiff = Math.abs(angleToPlayer - angle);
+            
+            if (angleDiff < 0.1 && dist < 1000) { // Touché
+                const damage = this.localPlayer.weapon === 'rifle' ? 30 : 20;
+                this.hitPlayer(player.id, damage);
+            }
+        });
+        
+        // Mise à jour de l'état
+        firebaseManager.updatePlayerState({ ammo: this.localPlayer.ammo });
+    }
+
+    // Touche un joueur
+    hitPlayer(playerId, damage) {
+        if (!this.players[playerId]) return;
+        
+        const player = this.players[playerId];
+        player.health = Math.max(0, player.health - damage);
+        
+        if (player.health <= 0) {
+            player.alive = false;
+            firebaseManager.reportPlayerDeath(playerId);
+            
+            // Transfère la bombe si nécessaire
+            if (player.hasBomb) {
+                // La bombe tombe au sol, peut être ramassée
+                player.hasBomb = false;
             }
         }
+        
+        // Met à jour l'état du joueur touché
+        database.ref(`lobbies/${firebaseManager.currentLobby}/players/${playerId}/state`).update({
+            health: player.health,
+            alive: player.alive
+        });
     }
 
-    checkGameState() {
-        // Mode multijoueur - conditions différentes
-        if (CONFIG.GAME.MODE === 'bomb_defusal') {
-            // Les conditions de fin sont gérées par le système multijoueur
-            return;
-        }
+    // Interagit (plante/désamorce la bombe)
+    interact() {
+        if (!this.localPlayer || !this.localPlayer.alive) return;
         
-        // Mode solo classique
-        // Vérification de la victoire
-        if (enemies.length === 0) {
-            this.victory();
-        }
-        
-        // Vérification de la santé du joueur
-        if (player && player.health <= 0) {
-            this.gameOver('Vous avez été éliminé!');
-        }
-        
-        // Vérification du temps
-        if (gameTime <= 0) {
-            this.gameOver('Temps écoulé!');
-        }
-    }
-
-    startGameTimer() {
-        this.gameTimer = setInterval(() => {
-            if (gameRunning && gameTime > 0) {
-                gameTime--;
-                this.updateTimeDisplay();
-                
-                if (gameTime <= 0) {
-                    this.gameOver('Temps écoulé!');
+        // Vérifie si le joueur peut planter la bombe
+        if (this.localPlayer.team === 'T' && this.localPlayer.hasBomb && !this.gameState.bombPlanted) {
+            // Vérifie si le joueur est sur un site
+            for (const [site, area] of Object.entries(this.map.bombSites)) {
+                if (this.localPlayer.x >= area.x && 
+                    this.localPlayer.x <= area.x + area.width &&
+                    this.localPlayer.y >= area.y && 
+                    this.localPlayer.y <= area.y + area.height) {
+                    this.plantBomb(site);
+                    break;
                 }
             }
+        }
+        
+        // Vérifie si le joueur peut désamorcer
+        if (this.localPlayer.team === 'CT' && this.gameState.bombPlanted && !this.localPlayer.isDefusing) {
+            const site = this.map.bombSites[this.gameState.bombSite];
+            const dx = this.localPlayer.x - (site.x + site.width/2);
+            const dy = this.localPlayer.y - (site.y + site.height/2);
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            
+            if (dist < 50) {
+                this.startDefuse();
+            }
+        }
+    }
+
+    // Plante la bombe
+    plantBomb(site) {
+        this.localPlayer.hasBomb = false;
+        firebaseManager.plantBomb(site);
+        firebaseManager.sendChatMessage(`💣 Bombe plantée sur ${site}!`);
+    }
+
+    // Commence le désamorçage
+    startDefuse() {
+        this.localPlayer.isDefusing = true;
+        firebaseManager.updatePlayerState({ isDefusing: true });
+        
+        let defuseTime = 5;
+        const defuseInterval = setInterval(() => {
+            defuseTime--;
+            
+            if (defuseTime <= 0) {
+                clearInterval(defuseInterval);
+                this.defuseBomb();
+            }
+            
+            // Si le joueur bouge ou meurt, annule le désamorçage
+            if (!this.localPlayer.isDefusing || !this.localPlayer.alive) {
+                clearInterval(defuseInterval);
+                this.localPlayer.isDefusing = false;
+                firebaseManager.updatePlayerState({ isDefusing: false });
+            }
         }, 1000);
     }
 
-    updateTimeDisplay() {
-        const minutes = Math.floor(gameTime / 60);
-        const seconds = gameTime % 60;
-        const timeString = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-        
-        const timeElement = document.getElementById('timeLeft');
-        if (timeElement) {
-            timeElement.textContent = timeString;
+    // Désamorce la bombe
+    defuseBomb() {
+        firebaseManager.defuseBomb();
+        firebaseManager.sendChatMessage('🛡️ Bombe désamorcée!');
+    }
+
+    // Timer de la bombe
+    startBombTimer() {
+        let bombTime = 40;
+        this.bombTimer = setInterval(() => {
+            bombTime--;
             
-            // Couleur d'urgence
-            if (gameTime <= 30) {
-                timeElement.style.color = '#ff0000';
-                timeElement.style.animation = 'pulse 1s infinite';
-            } else if (gameTime <= 60) {
-                timeElement.style.color = '#ffaa00';
-            } else {
-                timeElement.style.color = '#ffffff';
-                timeElement.style.animation = 'none';
+            if (bombTime <= 0) {
+                clearInterval(this.bombTimer);
+                this.bombExplode();
             }
-        }
+        }, 1000);
     }
 
-    updateEnemyCount() {
-        const countElement = document.getElementById('enemyCount');
-        if (countElement) {
-            countElement.textContent = enemies.length;
-        }
-    }
-
-    setupMiniMap() {
-        const canvas = document.getElementById('miniMap');
-        if (!canvas) return;
-        
-        const ctx = canvas.getContext('2d');
-        const size = 150;
-        canvas.width = size;
-        canvas.height = size;
-        
-        this.miniMapCtx = ctx;
-        this.updateMiniMap();
-        
-        // Mise à jour périodique de la mini-carte
-        setInterval(() => {
-            if (gameRunning) {
-                this.updateMiniMap();
-            }
-        }, 100);
-    }
-
-    updateMiniMap() {
-        if (!this.miniMapCtx) return;
-        
-        const ctx = this.miniMapCtx;
-        const size = 150;
-        const scale = size / CONFIG.MAP.SIZE;
-        
-        // Effacer la carte
-        ctx.fillStyle = '#2a2a2a';
-        ctx.fillRect(0, 0, size, size);
-        
-        // Bordure
-        ctx.strokeStyle = '#666';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(0, 0, size, size);
-        
-        // Obstacles (simplifié)
-        ctx.fillStyle = '#666';
-        obstacles.forEach(obstacle => {
-            const pos = obstacle.position;
-            const x = (pos.x + CONFIG.MAP.SIZE/2) * scale;
-            const z = (pos.z + CONFIG.MAP.SIZE/2) * scale;
-            ctx.fillRect(x - 2, z - 2, 4, 4);
+    // Explosion de la bombe
+    bombExplode() {
+        database.ref(`lobbies/${firebaseManager.currentLobby}/gameState`).update({
+            bombExploded: true
         });
         
-        // Ennemis
-        ctx.fillStyle = '#ff4444';
-        enemies.forEach(enemy => {
-            const pos = enemy.position;
-            const x = (pos.x + CONFIG.MAP.SIZE/2) * scale;
-            const z = (pos.z + CONFIG.MAP.SIZE/2) * scale;
+        // Les terroristes gagnent
+        firebaseManager.updateScore(false);
+        firebaseManager.sendChatMessage('💥 La bombe a explosé! Les Terroristes gagnent!');
+    }
+
+    // Timer du round
+    startRoundTimer() {
+        let roundTime = 120;
+        this.roundTimer = setInterval(() => {
+            roundTime--;
             
-            ctx.beginPath();
-            ctx.arc(x, z, 3, 0, Math.PI * 2);
-            ctx.fill();
-        });
+            const minutes = Math.floor(roundTime / 60);
+            const seconds = roundTime % 60;
+            document.getElementById('gameTimer').textContent = 
+                `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            
+            if (roundTime <= 0) {
+                clearInterval(this.roundTimer);
+                this.endRound();
+            }
+        }, 1000);
+    }
+
+    // Fin du round
+    endRound() {
+        clearInterval(this.bombTimer);
+        clearInterval(this.roundTimer);
         
-        // Joueur
-        if (camera) {
-            ctx.fillStyle = '#00ff00';
-            const playerX = (camera.position.x + CONFIG.MAP.SIZE/2) * scale;
-            const playerZ = (camera.position.z + CONFIG.MAP.SIZE/2) * scale;
-            
-            ctx.beginPath();
-            ctx.arc(playerX, playerZ, 4, 0, Math.PI * 2);
-            ctx.fill();
-            
-            // Direction du joueur
-            ctx.strokeStyle = '#00ff00';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.moveTo(playerX, playerZ);
-            const dirX = playerX + Math.sin(mouseX) * 10;
-            const dirZ = playerZ + Math.cos(mouseX) * 10;
-            ctx.lineTo(dirX, dirZ);
-            ctx.stroke();
+        // Détermine le gagnant
+        const ctAlive = Object.values(this.players).filter(p => p.team === 'CT' && p.alive).length;
+        const tAlive = Object.values(this.players).filter(p => p.team === 'T' && p.alive).length;
+        
+        let ctWin = false;
+        if (this.gameState.bombDefused) {
+            ctWin = true;
+        } else if (this.gameState.bombExploded) {
+            ctWin = false;
+        } else if (tAlive === 0) {
+            ctWin = true;
+        } else if (ctAlive === 0) {
+            ctWin = false;
+        } else if (!this.gameState.bombPlanted) {
+            ctWin = true; // Temps écoulé sans bombe plantée
         }
-    }
-
-    updateGameStatus() {
-        this.updateEnemyCount();
-        this.updateTimeDisplay();
-    }
-
-    victory() {
-        gameRunning = false;
         
-        // Calcul du score final
-        const timeBonus = Math.max(0, gameTime * 10);
-        const accuracyBonus = Math.round(gameState.accuracy * 5);
-        const finalScore = gameState.kills * 100 + timeBonus + accuracyBonus;
+        firebaseManager.updateScore(ctWin);
         
-        const message = `
-            🎉 VICTOIRE! 🎉
-            
-            Tous les terroristes ont été éliminés!
-            
-            📊 STATISTIQUES:
-            • Éliminations: ${gameState.kills}
-            • Précision: ${gameState.accuracy}%
-            • Temps restant: ${gameTime}s
-            • Score final: ${finalScore}
-            
-            Voulez-vous rejouer?
-        `;
-        
+        // Prépare le prochain round après un délai
         setTimeout(() => {
-            if (confirm(message)) {
-                this.restart();
-            } else {
-                this.showMainMenu();
-            }
-        }, 1000);
+            this.prepareNextRound();
+        }, 5000);
     }
 
-    gameOver(reason = 'Game Over') {
-        gameRunning = false;
-        
-        const message = `
-            💀 ${reason} 💀
-            
-            📊 STATISTIQUES FINALES:
-            • Éliminations: ${gameState.kills}/${CONFIG.GAME.ENEMY_COUNT}
-            • Précision: ${gameState.accuracy}%
-            • Tirs tirés: ${gameState.shotsFired}
-            • Survie: ${CONFIG.GAME.INITIAL_TIME - gameTime}s
-            
-            Voulez-vous réessayer?
-        `;
-        
-        setTimeout(() => {
-            if (confirm(message)) {
-                this.restart();
-            } else {
-                this.showMainMenu();
-            }
-        }, 1000);
+    // Prépare le prochain round
+    prepareNextRound() {
+        // Réinitialise les joueurs, la bombe, etc.
+        // Cette fonction devrait être plus complexe dans un vrai jeu
+        location.reload(); // Pour simplifier, on recharge la page
     }
 
-    pause() {
-        if (gameRunning) {
-            gameRunning = false;
-            if (gameControls) {
-                gameControls.exitPointerLock();
-            }
+    // Menu d'achat (simplifié)
+    buyMenu() {
+        if (!this.localPlayer || !this.localPlayer.alive) return;
+        
+        // Simple achat d'arme
+        if (this.localPlayer.money >= 2700) {
+            this.localPlayer.weapon = 'rifle';
+            this.localPlayer.ammo = 30;
+            this.localPlayer.ammoReserve = 90;
+            this.localPlayer.money -= 2700;
+            firebaseManager.updatePlayerState({
+                weapon: 'rifle',
+                ammo: 30,
+                ammoReserve: 90,
+                money: this.localPlayer.money
+            });
         }
     }
-
-    resume() {
-        if (!gameRunning) {
-            gameRunning = true;
-            this.startUpdateLoop();
-            if (gameControls) {
-                gameControls.requestPointerLock();
-            }
-        }
-    }
-
-    restart() {
-        this.cleanup();
-        location.reload();
-    }
-
-    showMainMenu() {
-        gameRunning = false;
-        this.cleanup();
-        
-        const menu = document.getElementById('menu');
-        const hud = document.getElementById('hud');
-        
-        if (menu) menu.style.display = 'flex';
-        if (hud) hud.style.display = 'none';
-        
-        if (gameControls) {
-            gameControls.exitPointerLock();
-        }
-    }
-
-    cleanup() {
-        // Arrêter les timers
-        if (this.gameTimer) {
-            clearInterval(this.gameTimer);
-            this.gameTimer = null;
-        }
-        
-        if (this.updateLoop) {
-            cancelAnimationFrame(this.updateLoop);
-            this.updateLoop = null;
-        }
-        
-        // Nettoyer les objets du jeu
-        bullets.forEach(bullet => bullet.destroy());
-        bullets.length = 0;
-        
-        enemies.forEach(enemy => enemy.destroy());
-        enemies.length = 0;
-        
-        // Nettoyer le système de bombe
-        if (bombSystem) {
-            bombSystem.destroy();
-            bombSystem = null;
-        }
-        
-        // Nettoyer les éléments UI multijoueur
-        const elementsToRemove = [
-            'bombStatus', 'matchScore', 'bombUI', 
-            'bombTimer', 'scoreboard', 'pauseMenu'
-        ];
-        
-        elementsToRemove.forEach(id => {
-            const element = document.getElementById(id);
-            if (element) element.remove();
-        });
-        
-        // Réinitialiser les variables globales
-        gameRunning = false;
-        gameTime = CONFIG.GAME.INITIAL_TIME;
-        CONFIG.GAME.MODE = 'classic';
-    }
-
-    // Méthodes utilitaires
-    getGameStats() {
-        return {
-            ...gameState,
-            fps: this.fps,
-            enemiesRemaining: enemies.length,
-            timeRemaining: gameTime,
-            isRunning: gameRunning
-        };
-    }
-
-    // Debug
-    toggleDebugMode() {
-        const debugInfo = document.getElementById('debugInfo') || this.createDebugInfo();
-        debugInfo.style.display = debugInfo.style.display === 'none' ? 'block' : 'none';
-    }
-
-    createDebugInfo() {
-        const debugDiv = document.createElement('div');
-        debugDiv.id = 'debugInfo';
-        debugDiv.style.cssText = `
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            background: rgba(0,0,0,0.8);
-            color: #00ff00;
-            padding: 10px;
-            font-family: monospace;
-            font-size: 12px;
-            z-index: 3000;
-            border-radius: 5px;
-        `;
-        
-        document.body.appendChild(debugDiv);
-        
-        // Mise à jour périodique des infos de debug
-        setInterval(() => {
-            if (debugDiv.style.display !== 'none') {
-                const stats = this.getGameStats();
-                debugDiv.innerHTML = `
-                    FPS: ${stats.fps}<br>
-                    Position: ${camera.position.x.toFixed(1)}, ${camera.position.z.toFixed(1)}<br>
-                    Rotation: ${(mouseX * 180/Math.PI).toFixed(1)}°<br>
-                    Ennemis: ${stats.enemiesRemaining}<br>
-                    Balles: ${bullets.length}<br>
-                    Obstacles: ${obstacles.length}
-                `;
-            }
-        }, 100);
-        
-        return debugDiv;
-    }
 }
 
-// Instance globale du jeu
-const gameInstance = new Game();
-
-// Fonctions globales pour l'interface
-function startGame() {
-    gameInstance.start();
-}
-
-function pauseGame() {
-    gameInstance.pause();
-}
-
-function resumeGame() {
-    gameInstance.resume();
-}
-
-function restartGame() {
-    gameInstance.restart();
-}
-
-function gameOver(reason) {
-    gameInstance.gameOver(reason);
-}
-
-function victory() {
-    gameInstance.victory();
-}
-
-function updateEnemyCount() {
-    gameInstance.updateEnemyCount();
-}
-
-function showInstructions() {
-    document.getElementById('instructions').style.display = 'block';
-}
-
-function hideInstructions() {
-    document.getElementById('instructions').style.display = 'none';
-}
-
-// Initialisation automatique quand la page est chargée
-window.addEventListener('load', () => {
-    console.log('Mini CSGO: Web Strike - Page chargée');
-    
-    // Créer le bouton de debug (accessible avec F1)
-    document.addEventListener('keydown', (event) => {
-        if (event.key === 'F1') {
-            event.preventDefault();
-            gameInstance.toggleDebugMode();
-        }
-    });
-    
-    console.log('Appuyez sur F1 pour afficher les informations de debug');
-});
-
-// Gestion des erreurs globales
-window.addEventListener('error', (event) => {
-    console.error('Erreur de jeu:', event.error);
-    
-    if (gameRunning) {
-        gameInstance.pause();
-        alert('Une erreur est survenue. Le jeu a été mis en pause.');
-    }
-});
-
-// Export pour utilisation externe (si nécessaire)
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { Game, gameInstance };
-}
+// Instance globale
+window.game = new Game();
