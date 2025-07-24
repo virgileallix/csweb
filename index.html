@@ -3,18 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tactical Shooter 5v5</title>
+    <title>SIO SHOOTER - Tactical 5v5</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
     <!-- Menu principal -->
     <div id="menuScreen" class="screen active">
         <div class="container">
-            <h1 class="game-title">TACTICAL SHOOTER</h1>
-            <div class="menu-content">
-                <input type="text" id="playerName" placeholder="Entrez votre pseudo" class="input-field">
-                <button id="playBtn" class="btn btn-primary">JOUER</button>
+            <div class="game-logo">
+                <h1 class="game-title">
+                    <span class="title-sio">SIO</span>
+                    <span class="title-shooter">SHOOTER</span>
+                </h1>
+                <p class="game-subtitle">TACTICAL 5v5 COMPETITIVE</p>
             </div>
+            <div class="menu-content">
+                <div class="input-group">
+                    <input type="text" id="playerName" placeholder="Entrez votre pseudo" class="input-field" maxlength="16">
+                    <div class="input-underline"></div>
+                </div>
+                <button id="playBtn" class="btn btn-primary">
+                    <span>ENTRER EN JEU</span>
+                    <div class="btn-glow"></div>
+                </button>
+                <div class="version-info">Version 2.1.0 - Enhanced Edition</div>
+            </div>
+        </div>
+        <div class="background-animation">
+            <div class="particles"></div>
         </div>
     </div>
 
@@ -22,17 +41,30 @@
     <div id="lobbyScreen" class="screen">
         <div class="container">
             <div class="header">
-                <h2>Lobbys</h2>
-                <span id="playerInfo" class="player-info"></span>
+                <h2><i class="icon">🏟️</i> LOBBYS DISPONIBLES</h2>
+                <div class="player-info-card">
+                    <div class="player-avatar">👤</div>
+                    <span id="playerInfo" class="player-info"></span>
+                </div>
             </div>
             
             <div class="lobby-actions">
-                <button id="createLobbyBtn" class="btn btn-secondary">Créer un Lobby</button>
-                <button id="refreshLobbiesBtn" class="btn btn-secondary">Rafraîchir</button>
+                <button id="createLobbyBtn" class="btn btn-secondary">
+                    <i class="icon">➕</i> Créer un Lobby
+                </button>
+                <button id="refreshLobbiesBtn" class="btn btn-secondary">
+                    <i class="icon">🔄</i> Rafraîchir
+                </button>
+                <button id="backToMenuBtn" class="btn btn-outline">
+                    <i class="icon">⬅️</i> Retour
+                </button>
             </div>
 
             <div id="lobbyList" class="lobby-list">
-                <!-- Les lobbys seront affichés ici -->
+                <div class="lobby-loading">
+                    <div class="loading-spinner"></div>
+                    <p>Recherche des lobbys...</p>
+                </div>
             </div>
         </div>
     </div>
@@ -40,27 +72,61 @@
     <!-- Salle d'attente -->
     <div id="waitingRoom" class="screen">
         <div class="container">
-            <h2>Salle d'attente</h2>
+            <div class="room-header">
+                <h2><i class="icon">⏳</i> SALLE D'ATTENTE</h2>
+                <div class="room-status">
+                    <div class="status-indicator ready"></div>
+                    <span>En attente de joueurs</span>
+                </div>
+            </div>
+            
             <div class="room-info">
-                <p>Code du lobby: <span id="lobbyCode" class="code"></span></p>
-                <p>Joueurs: <span id="playerCount">1/10</span></p>
+                <div class="info-card">
+                    <span class="info-label">CODE LOBBY</span>
+                    <span id="lobbyCode" class="code"></span>
+                </div>
+                <div class="info-card">
+                    <span class="info-label">JOUEURS</span>
+                    <span id="playerCount" class="player-count">1/10</span>
+                </div>
+                <div class="info-card">
+                    <span class="info-label">MODE</span>
+                    <span class="game-mode">Compétitif 5v5</span>
+                </div>
             </div>
 
-            <div class="teams">
+            <div class="teams-container">
                 <div class="team team-ct">
-                    <h3>Équipe CT (Anti-Terroristes)</h3>
+                    <div class="team-header">
+                        <h3><i class="team-icon">🛡️</i> COUNTER-TERRORISTS</h3>
+                        <div class="team-score">Victoires: <span id="ctWins">0</span></div>
+                    </div>
                     <div id="teamCT" class="player-list"></div>
+                    <button id="joinCTBtn" class="join-team-btn">Rejoindre CT</button>
+                </div>
+                <div class="vs-divider">
+                    <div class="vs-text">VS</div>
                 </div>
                 <div class="team team-t">
-                    <h3>Équipe T (Terroristes)</h3>
+                    <div class="team-header">
+                        <h3><i class="team-icon">💥</i> TERRORISTS</h3>
+                        <div class="team-score">Victoires: <span id="tWins">0</span></div>
+                    </div>
                     <div id="teamT" class="player-list"></div>
+                    <button id="joinTBtn" class="join-team-btn">Rejoindre T</button>
                 </div>
             </div>
 
             <div class="room-actions">
-                <button id="switchTeamBtn" class="btn btn-secondary">Changer d'équipe</button>
-                <button id="startGameBtn" class="btn btn-primary" style="display: none;">Lancer la partie</button>
-                <button id="leaveLobbyBtn" class="btn btn-danger">Quitter</button>
+                <button id="switchTeamBtn" class="btn btn-secondary">
+                    <i class="icon">🔄</i> Changer d'équipe
+                </button>
+                <button id="startGameBtn" class="btn btn-primary" style="display: none;">
+                    <i class="icon">🎮</i> LANCER LA PARTIE
+                </button>
+                <button id="leaveLobbyBtn" class="btn btn-danger">
+                    <i class="icon">🚪</i> Quitter
+                </button>
             </div>
         </div>
     </div>
@@ -68,33 +134,252 @@
     <!-- Écran de jeu -->
     <div id="gameScreen" class="screen">
         <div class="game-container">
-            <!-- HUD -->
+            <!-- HUD Principal -->
             <div class="hud">
+                <!-- Top HUD -->
                 <div class="hud-top">
-                    <div class="team-score">
-                        <span class="ct-score">CT: <span id="ctScore">0</span></span>
-                        <span class="timer" id="gameTimer">2:00</span>
-                        <span class="t-score">T: <span id="tScore">0</span></span>
+                    <div class="team-score-container">
+                        <div class="team-score ct-team">
+                            <div class="team-flag">🛡️</div>
+                            <span class="score-number" id="ctScore">0</span>
+                            <span class="team-name">CT</span>
+                        </div>
+                        <div class="match-info">
+                            <div class="round-info">
+                                <span class="round-label">ROUND</span>
+                                <span id="currentRound" class="round-number">1</span>
+                            </div>
+                            <div class="timer-container">
+                                <div class="timer-circle">
+                                    <span id="gameTimer" class="timer">2:00</span>
+                                </div>
+                            </div>
+                            <div class="bomb-timer" id="bombTimer" style="display: none;">
+                                <div class="bomb-icon">💣</div>
+                                <span id="bombTimeLeft">40</span>
+                            </div>
+                        </div>
+                        <div class="team-score t-team">
+                            <span class="team-name">T</span>
+                            <span class="score-number" id="tScore">0</span>
+                            <div class="team-flag">💥</div>
+                        </div>
                     </div>
                 </div>
                 
+                <!-- Bottom HUD -->
                 <div class="hud-bottom">
-                    <div class="player-stats">
-                        <div class="health">HP: <span id="playerHealth">100</span></div>
-                        <div class="ammo">Munitions: <span id="playerAmmo">30/90</span></div>
+                    <div class="player-stats-container">
+                        <div class="health-armor-container">
+                            <div class="health-display">
+                                <div class="stat-icon">❤️</div>
+                                <div class="stat-bar">
+                                    <div class="stat-fill health-fill" id="healthBar"></div>
+                                    <span id="playerHealth" class="stat-value">100</span>
+                                </div>
+                            </div>
+                            <div class="armor-display">
+                                <div class="stat-icon">🛡️</div>
+                                <div class="stat-bar">
+                                    <div class="stat-fill armor-fill" id="armorBar"></div>
+                                    <span id="playerArmor" class="stat-value">100</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="weapon-info">
+                            <div class="weapon-display">
+                                <div class="weapon-icon" id="weaponIcon">🔫</div>
+                                <div class="weapon-name" id="weaponName">M4A4</div>
+                            </div>
+                            <div class="ammo-display">
+                                <span id="playerAmmo" class="ammo-current">30</span>
+                                <span class="ammo-separator">/</span>
+                                <span id="playerAmmoReserve" class="ammo-reserve">90</span>
+                            </div>
+                        </div>
+                        
+                        <div class="money-display">
+                            <div class="money-icon">💰</div>
+                            <span id="playerMoney" class="money-amount">$800</span>
+                        </div>
                     </div>
-                    <div class="bomb-status" id="bombStatus"></div>
+                    
+                    <div class="action-indicators">
+                        <div id="bombStatus" class="bomb-status" style="display: none;">
+                            <div class="bomb-pulse"></div>
+                            <span class="bomb-text">Bombe plantée sur A</span>
+                        </div>
+                        <div id="defuseStatus" class="defuse-status" style="display: none;">
+                            <div class="defuse-progress"></div>
+                            <span class="defuse-text">Désamorçage en cours...</span>
+                        </div>
+                        <div id="reloadStatus" class="reload-status" style="display: none;">
+                            <div class="reload-progress"></div>
+                            <span class="reload-text">Rechargement...</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Radar/Minimap -->
+                <div class="radar-container">
+                    <div class="radar-title">RADAR</div>
+                    <canvas id="radarCanvas" class="radar"></canvas>
+                </div>
+                
+                <!-- Kill Feed -->
+                <div class="killfeed" id="killFeed"></div>
+                
+                <!-- Player List (TAB) -->
+                <div class="scoreboard" id="scoreboard" style="display: none;">
+                    <div class="scoreboard-header">
+                        <h3>SIO SHOOTER - MATCH EN COURS</h3>
+                        <div class="server-info">Serveur: EU-West-1 | Ping: 25ms</div>
+                    </div>
+                    <div class="teams-scoreboard">
+                        <div class="team-scoreboard ct-scoreboard">
+                            <div class="team-header-score">
+                                <span class="team-name">Counter-Terrorists</span>
+                                <span class="team-score-large" id="ctScoreBoard">0</span>
+                            </div>
+                            <div class="players-list" id="ctPlayersList"></div>
+                        </div>
+                        <div class="team-scoreboard t-scoreboard">
+                            <div class="team-header-score">
+                                <span class="team-name">Terrorists</span>
+                                <span class="team-score-large" id="tScoreBoard">0</span>
+                            </div>
+                            <div class="players-list" id="tPlayersList"></div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
             <!-- Canvas du jeu -->
             <canvas id="gameCanvas"></canvas>
+            
+            <!-- Réticule personnalisé -->
+            <div id="crosshair" class="crosshair"></div>
 
-            <!-- Chat -->
+            <!-- Chat amélioré -->
             <div class="chat-container">
+                <div class="chat-tabs">
+                    <button class="chat-tab active" data-tab="all">TOUS</button>
+                    <button class="chat-tab" data-tab="team">ÉQUIPE</button>
+                </div>
                 <div id="chatMessages" class="chat-messages"></div>
-                <input type="text" id="chatInput" class="chat-input" placeholder="Appuyez sur Entrée pour chatter...">
+                <div class="chat-input-container">
+                    <input type="text" id="chatInput" class="chat-input" placeholder="Tapez votre message (Entrée pour envoyer, Shift+Entrée pour équipe)">
+                    <button class="chat-send-btn">➤</button>
+                </div>
             </div>
+            
+            <!-- Menu d'achat -->
+            <div id="buyMenu" class="buy-menu" style="display: none;">
+                <div class="buy-menu-header">
+                    <h3>💰 MENU D'ACHAT</h3>
+                    <div class="buy-time">Temps: <span id="buyTimeLeft">15</span>s</div>
+                </div>
+                <div class="buy-categories">
+                    <div class="buy-category">
+                        <h4>🔫 ARMES PRINCIPALES</h4>
+                        <div class="buy-items">
+                            <div class="buy-item" data-item="ak47" data-price="2700">
+                                <div class="item-icon">🏹</div>
+                                <div class="item-info">
+                                    <span class="item-name">AK-47</span>
+                                    <span class="item-price">$2700</span>
+                                </div>
+                            </div>
+                            <div class="buy-item" data-item="m4a4" data-price="3100">
+                                <div class="item-icon">🔫</div>
+                                <div class="item-info">
+                                    <span class="item-name">M4A4</span>
+                                    <span class="item-price">$3100</span>
+                                </div>
+                            </div>
+                            <div class="buy-item" data-item="awp" data-price="4750">
+                                <div class="item-icon">🎯</div>
+                                <div class="item-info">
+                                    <span class="item-name">AWP</span>
+                                    <span class="item-price">$4750</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="buy-category">
+                        <h4>🛡️ ÉQUIPEMENT</h4>
+                        <div class="buy-items">
+                            <div class="buy-item" data-item="armor" data-price="650">
+                                <div class="item-icon">🛡️</div>
+                                <div class="item-info">
+                                    <span class="item-name">Gilet Pare-balles</span>
+                                    <span class="item-price">$650</span>
+                                </div>
+                            </div>
+                            <div class="buy-item" data-item="defuse" data-price="400">
+                                <div class="item-icon">🔧</div>
+                                <div class="item-info">
+                                    <span class="item-name">Kit de Désamorçage</span>
+                                    <span class="item-price">$400</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="buy-category">
+                        <h4>💣 GRENADES</h4>
+                        <div class="buy-items">
+                            <div class="buy-item" data-item="hegrenade" data-price="300">
+                                <div class="item-icon">💣</div>
+                                <div class="item-info">
+                                    <span class="item-name">Grenade HE</span>
+                                    <span class="item-price">$300</span>
+                                </div>
+                            </div>
+                            <div class="buy-item" data-item="flashbang" data-price="200">
+                                <div class="item-icon">💡</div>
+                                <div class="item-info">
+                                    <span class="item-name">Flashbang</span>
+                                    <span class="item-price">$200</span>
+                                </div>
+                            </div>
+                            <div class="buy-item" data-item="smoke" data-price="300">
+                                <div class="item-icon">☁️</div>
+                                <div class="item-info">
+                                    <span class="item-name">Grenade Fumigène</span>
+                                    <span class="item-price">$300</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Notifications de jeu -->
+            <div id="gameNotifications" class="game-notifications"></div>
+            
+            <!-- Menu pause (ESC) -->
+            <div id="pauseMenu" class="pause-menu" style="display: none;">
+                <div class="pause-content">
+                    <h2>JEU EN PAUSE</h2>
+                    <div class="pause-actions">
+                        <button id="resumeBtn" class="btn btn-primary">Reprendre</button>
+                        <button id="settingsBtn" class="btn btn-secondary">Paramètres</button>
+                        <button id="leaveGameBtn" class="btn btn-danger">Quitter la partie</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Screen -->
+    <div id="loadingScreen" class="loading-screen" style="display: none;">
+        <div class="loading-content">
+            <div class="loading-logo">SIO SHOOTER</div>
+            <div class="loading-bar">
+                <div class="loading-progress"></div>
+            </div>
+            <div class="loading-text">Chargement de la partie...</div>
         </div>
     </div>
 
