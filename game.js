@@ -10,6 +10,7 @@ class Game {
         this.localPlayer = null;
         this.lobbyData = null;
         this.gameState = null;
+        this.currentMap = null;
         
         this.keys = {};
         this.mouse = { x: 0, y: 0 };
@@ -65,72 +66,339 @@ class Game {
                 accuracy: 0.99,
                 range: 2000,
                 cost: 4750
+            },
+            shotgun: {
+                name: 'Nova',
+                icon: '💥',
+                damage: 45,
+                fireRate: 880,
+                ammo: 8,
+                maxAmmo: 32,
+                reloadTime: 3500,
+                accuracy: 0.4,
+                range: 400,
+                cost: 1200
+            },
+            sniper: {
+                name: 'SSG 08',
+                icon: '🎯',
+                damage: 88,
+                fireRate: 1250,
+                ammo: 10,
+                maxAmmo: 90,
+                reloadTime: 3000,
+                accuracy: 0.95,
+                range: 1800,
+                cost: 1700
             }
         };
         
-        // Carte améliorée
-        this.map = {
-            width: 2400,
-            height: 1600,
-            bombSites: {
-                A: { 
-                    x: 500, y: 300, width: 200, height: 200,
-                    name: 'Site A', color: '#ff4444'
+        // Système de cartes
+        this.maps = {
+            de_academy: {
+                name: 'SIO Academy',
+                description: 'École d\'informatique moderne',
+                gameMode: ['competitive', 'casual'],
+                width: 2400,
+                height: 1600,
+                theme: 'modern',
+                thumbnail: '🏢',
+                bombSites: {
+                    A: { x: 500, y: 300, width: 200, height: 200, name: 'Site A', color: '#ff4444' },
+                    B: { x: 1700, y: 1100, width: 200, height: 200, name: 'Site B', color: '#44ff44' }
                 },
-                B: { 
-                    x: 1700, y: 1100, width: 200, height: 200,
-                    name: 'Site B', color: '#44ff44'
+                spawnPoints: {
+                    CT: [
+                        { x: 200, y: 800, angle: 0 },
+                        { x: 250, y: 750, angle: 0 },
+                        { x: 250, y: 850, angle: 0 },
+                        { x: 300, y: 800, angle: 0 },
+                        { x: 200, y: 900, angle: 0 }
+                    ],
+                    T: [
+                        { x: 2100, y: 800, angle: Math.PI },
+                        { x: 2050, y: 750, angle: Math.PI },
+                        { x: 2050, y: 850, angle: Math.PI },
+                        { x: 2000, y: 800, angle: Math.PI },
+                        { x: 2100, y: 900, angle: Math.PI }
+                    ]
+                },
+                obstacles: [
+                    // Murs extérieurs
+                    { x: 0, y: 0, width: 2400, height: 30, type: 'wall' },
+                    { x: 0, y: 1570, width: 2400, height: 30, type: 'wall' },
+                    { x: 0, y: 0, width: 30, height: 1600, type: 'wall' },
+                    { x: 2370, y: 0, width: 30, height: 1600, type: 'wall' },
+                    
+                    // Structures principales
+                    { x: 400, y: 200, width: 400, height: 30, type: 'wall' },
+                    { x: 400, y: 200, width: 30, height: 300, type: 'wall' },
+                    { x: 770, y: 200, width: 30, height: 300, type: 'wall' },
+                    { x: 400, y: 470, width: 400, height: 30, type: 'wall' },
+                    
+                    { x: 1600, y: 1000, width: 400, height: 30, type: 'wall' },
+                    { x: 1600, y: 1000, width: 30, height: 300, type: 'wall' },
+                    { x: 1970, y: 1000, width: 30, height: 300, type: 'wall' },
+                    { x: 1600, y: 1270, width: 400, height: 30, type: 'wall' },
+                    
+                    // Couvertures
+                    { x: 1000, y: 600, width: 400, height: 150, type: 'cover' },
+                    { x: 800, y: 850, width: 150, height: 100, type: 'cover' },
+                    { x: 1450, y: 650, width: 150, height: 100, type: 'cover' }
+                ],
+                buyZones: {
+                    CT: { x: 100, y: 700, width: 400, height: 200 },
+                    T: { x: 1900, y: 700, width: 400, height: 200 }
                 }
             },
-            spawnPoints: {
-                CT: [
-                    { x: 200, y: 800, angle: 0 },
-                    { x: 250, y: 750, angle: 0 },
-                    { x: 250, y: 850, angle: 0 },
-                    { x: 300, y: 800, angle: 0 },
-                    { x: 200, y: 900, angle: 0 }
+            
+            de_warehouse: {
+                name: 'Warehouse',
+                description: 'Entrepôt industriel abandonné',
+                gameMode: ['competitive', 'casual'],
+                width: 2000,
+                height: 1400,
+                theme: 'industrial',
+                thumbnail: '📦',
+                bombSites: {
+                    A: { x: 300, y: 200, width: 180, height: 180, name: 'Site A', color: '#ff6644' },
+                    B: { x: 1520, y: 1000, width: 180, height: 180, name: 'Site B', color: '#44ff88' }
+                },
+                spawnPoints: {
+                    CT: [
+                        { x: 150, y: 700, angle: 0 },
+                        { x: 200, y: 650, angle: 0 },
+                        { x: 200, y: 750, angle: 0 },
+                        { x: 250, y: 700, angle: 0 },
+                        { x: 150, y: 800, angle: 0 }
+                    ],
+                    T: [
+                        { x: 1850, y: 700, angle: Math.PI },
+                        { x: 1800, y: 650, angle: Math.PI },
+                        { x: 1800, y: 750, angle: Math.PI },
+                        { x: 1750, y: 700, angle: Math.PI },
+                        { x: 1850, y: 800, angle: Math.PI }
+                    ]
+                },
+                obstacles: [
+                    // Murs extérieurs
+                    { x: 0, y: 0, width: 2000, height: 25, type: 'wall' },
+                    { x: 0, y: 1375, width: 2000, height: 25, type: 'wall' },
+                    { x: 0, y: 0, width: 25, height: 1400, type: 'wall' },
+                    { x: 1975, y: 0, width: 25, height: 1400, type: 'wall' },
+                    
+                    // Containers et obstacles
+                    { x: 600, y: 200, width: 200, height: 100, type: 'cover' },
+                    { x: 1200, y: 1100, width: 200, height: 100, type: 'cover' },
+                    { x: 900, y: 500, width: 200, height: 400, type: 'wall' },
+                    { x: 400, y: 800, width: 100, height: 200, type: 'cover' },
+                    { x: 1500, y: 400, width: 100, height: 200, type: 'cover' }
                 ],
-                T: [
-                    { x: 2100, y: 800, angle: Math.PI },
-                    { x: 2050, y: 750, angle: Math.PI },
-                    { x: 2050, y: 850, angle: Math.PI },
-                    { x: 2000, y: 800, angle: Math.PI },
-                    { x: 2100, y: 900, angle: Math.PI }
+                buyZones: {
+                    CT: { x: 50, y: 600, width: 350, height: 200 },
+                    T: { x: 1600, y: 600, width: 350, height: 200 }
+                }
+            },
+            
+            de_office: {
+                name: 'Office Complex',
+                description: 'Complexe de bureaux moderne',
+                gameMode: ['competitive', 'casual'],
+                width: 2200,
+                height: 1500,
+                theme: 'office',
+                thumbnail: '🏢',
+                bombSites: {
+                    A: { x: 400, y: 250, width: 160, height: 160, name: 'Site A', color: '#4488ff' },
+                    B: { x: 1640, y: 1090, width: 160, height: 160, name: 'Site B', color: '#ff8844' }
+                },
+                spawnPoints: {
+                    CT: [
+                        { x: 180, y: 750, angle: 0 },
+                        { x: 230, y: 700, angle: 0 },
+                        { x: 230, y: 800, angle: 0 },
+                        { x: 280, y: 750, angle: 0 },
+                        { x: 180, y: 850, angle: 0 }
+                    ],
+                    T: [
+                        { x: 2020, y: 750, angle: Math.PI },
+                        { x: 1970, y: 700, angle: Math.PI },
+                        { x: 1970, y: 800, angle: Math.PI },
+                        { x: 1920, y: 750, angle: Math.PI },
+                        { x: 2020, y: 850, angle: Math.PI }
+                    ]
+                },
+                obstacles: [
+                    // Murs extérieurs
+                    { x: 0, y: 0, width: 2200, height: 28, type: 'wall' },
+                    { x: 0, y: 1472, width: 2200, height: 28, type: 'wall' },
+                    { x: 0, y: 0, width: 28, height: 1500, type: 'wall' },
+                    { x: 2172, y: 0, width: 28, height: 1500, type: 'wall' },
+                    
+                    // Bureaux et cloisons
+                    { x: 500, y: 400, width: 300, height: 20, type: 'wall' },
+                    { x: 500, y: 400, width: 20, height: 200, type: 'wall' },
+                    { x: 780, y: 400, width: 20, height: 200, type: 'wall' },
+                    
+                    { x: 1400, y: 880, width: 300, height: 20, type: 'wall' },
+                    { x: 1400, y: 880, width: 20, height: 200, type: 'wall' },
+                    { x: 1680, y: 880, width: 20, height: 200, type: 'wall' },
+                    
+                    // Mobilier de bureau
+                    { x: 800, y: 600, width: 600, height: 300, type: 'cover' },
+                    { x: 600, y: 900, width: 120, height: 80, type: 'cover' },
+                    { x: 1480, y: 520, width: 120, height: 80, type: 'cover' }
+                ],
+                buyZones: {
+                    CT: { x: 80, y: 650, width: 380, height: 200 },
+                    T: { x: 1740, y: 650, width: 380, height: 200 }
+                }
+            },
+            
+            dm_killhouse: {
+                name: 'Killhouse',
+                description: 'Zone d\'entraînement compacte',
+                gameMode: ['ffa', 'tdm'],
+                width: 1600,
+                height: 1200,
+                theme: 'military',
+                thumbnail: '🎯',
+                spawnPoints: {
+                    FFA: [
+                        { x: 200, y: 200, angle: 0 },
+                        { x: 1400, y: 200, angle: Math.PI },
+                        { x: 200, y: 1000, angle: Math.PI/2 },
+                        { x: 1400, y: 1000, angle: -Math.PI/2 },
+                        { x: 800, y: 600, angle: 0 },
+                        { x: 500, y: 400, angle: Math.PI/4 },
+                        { x: 1100, y: 800, angle: -Math.PI/4 },
+                        { x: 800, y: 200, angle: Math.PI/2 },
+                        { x: 300, y: 600, angle: 0 },
+                        { x: 1300, y: 600, angle: Math.PI }
+                    ],
+                    CT: [
+                        { x: 150, y: 600, angle: 0 },
+                        { x: 200, y: 550, angle: 0 },
+                        { x: 200, y: 650, angle: 0 },
+                        { x: 250, y: 600, angle: 0 },
+                        { x: 150, y: 700, angle: 0 }
+                    ],
+                    T: [
+                        { x: 1450, y: 600, angle: Math.PI },
+                        { x: 1400, y: 550, angle: Math.PI },
+                        { x: 1400, y: 650, angle: Math.PI },
+                        { x: 1350, y: 600, angle: Math.PI },
+                        { x: 1450, y: 700, angle: Math.PI }
+                    ]
+                },
+                obstacles: [
+                    // Murs extérieurs
+                    { x: 0, y: 0, width: 1600, height: 20, type: 'wall' },
+                    { x: 0, y: 1180, width: 1600, height: 20, type: 'wall' },
+                    { x: 0, y: 0, width: 20, height: 1200, type: 'wall' },
+                    { x: 1580, y: 0, width: 20, height: 1200, type: 'wall' },
+                    
+                    // Structures d'entraînement
+                    { x: 400, y: 300, width: 200, height: 200, type: 'cover' },
+                    { x: 1000, y: 700, width: 200, height: 200, type: 'cover' },
+                    { x: 700, y: 500, width: 200, height: 200, type: 'wall' },
+                    { x: 300, y: 800, width: 100, height: 100, type: 'cover' },
+                    { x: 1200, y: 300, width: 100, height: 100, type: 'cover' }
+                ],
+                weaponSpawns: [
+                    { x: 500, y: 200, weapon: 'ak47', respawnTime: 25000 },
+                    { x: 1100, y: 200, weapon: 'm4a4', respawnTime: 25000 },
+                    { x: 300, y: 1000, weapon: 'awp', respawnTime: 40000 },
+                    { x: 1300, y: 1000, weapon: 'shotgun', respawnTime: 20000 },
+                    { x: 800, y: 100, weapon: 'sniper', respawnTime: 35000 },
+                    { x: 200, y: 400, weapon: 'ak47', respawnTime: 25000 },
+                    { x: 1400, y: 800, weapon: 'm4a4', respawnTime: 25000 }
                 ]
             },
-            obstacles: [
-                // Murs extérieurs
-                { x: 0, y: 0, width: 2400, height: 30, type: 'wall' },
-                { x: 0, y: 1570, width: 2400, height: 30, type: 'wall' },
-                { x: 0, y: 0, width: 30, height: 1600, type: 'wall' },
-                { x: 2370, y: 0, width: 30, height: 1600, type: 'wall' },
-                
-                // Structures complexes
-                { x: 400, y: 200, width: 400, height: 30, type: 'wall' },
-                { x: 400, y: 200, width: 30, height: 300, type: 'wall' },
-                { x: 770, y: 200, width: 30, height: 300, type: 'wall' },
-                { x: 400, y: 470, width: 400, height: 30, type: 'wall' },
-                
-                { x: 1600, y: 1000, width: 400, height: 30, type: 'wall' },
-                { x: 1600, y: 1000, width: 30, height: 300, type: 'wall' },
-                { x: 1970, y: 1000, width: 30, height: 300, type: 'wall' },
-                { x: 1600, y: 1270, width: 400, height: 30, type: 'wall' },
-                
-                // Couvertures au centre
-                { x: 1000, y: 600, width: 400, height: 150, type: 'cover' },
-                { x: 800, y: 850, width: 150, height: 100, type: 'cover' },
-                { x: 1450, y: 650, width: 150, height: 100, type: 'cover' },
-                { x: 600, y: 900, width: 100, height: 200, type: 'cover' },
-                { x: 1700, y: 500, width: 100, height: 200, type: 'cover' },
-                
-                // Passages étroits
-                { x: 1100, y: 300, width: 200, height: 30, type: 'wall' },
-                { x: 1100, y: 1270, width: 200, height: 30, type: 'wall' }
-            ],
-            buyZones: {
-                CT: { x: 100, y: 700, width: 400, height: 200 },
-                T: { x: 1900, y: 700, width: 400, height: 200 }
+            
+            dm_dust: {
+                name: 'Dust Arena',
+                description: 'Arène désertique pour combats rapides',
+                gameMode: ['ffa', 'tdm'],
+                width: 1800,
+                height: 1300,
+                theme: 'desert',
+                thumbnail: '🏜️',
+                spawnPoints: {
+                    FFA: [
+                        { x: 250, y: 250, angle: 0 },
+                        { x: 1550, y: 250, angle: Math.PI },
+                        { x: 250, y: 1050, angle: Math.PI/2 },
+                        { x: 1550, y: 1050, angle: -Math.PI/2 },
+                        { x: 900, y: 650, angle: 0 },
+                        { x: 600, y: 400, angle: Math.PI/3 },
+                        { x: 1200, y: 900, angle: -Math.PI/3 },
+                        { x: 450, y: 800, angle: Math.PI/6 },
+                        { x: 1350, y: 500, angle: -Math.PI/6 },
+                        { x: 900, y: 300, angle: Math.PI/2 }
+                    ],
+                    CT: [
+                        { x: 180, y: 650, angle: 0 },
+                        { x: 230, y: 600, angle: 0 },
+                        { x: 230, y: 700, angle: 0 },
+                        { x: 280, y: 650, angle: 0 },
+                        { x: 180, y: 750, angle: 0 }
+                    ],
+                    T: [
+                        { x: 1620, y: 650, angle: Math.PI },
+                        { x: 1570, y: 600, angle: Math.PI },
+                        { x: 1570, y: 700, angle: Math.PI },
+                        { x: 1520, y: 650, angle: Math.PI },
+                        { x: 1620, y: 750, angle: Math.PI }
+                    ]
+                },
+                obstacles: [
+                    // Murs extérieurs
+                    { x: 0, y: 0, width: 1800, height: 22, type: 'wall' },
+                    { x: 0, y: 1278, width: 1800, height: 22, type: 'wall' },
+                    { x: 0, y: 0, width: 22, height: 1300, type: 'wall' },
+                    { x: 1778, y: 0, width: 22, height: 1300, type: 'wall' },
+                    
+                    // Rochers et dunes
+                    { x: 500, y: 200, width: 150, height: 180, type: 'cover' },
+                    { x: 1150, y: 920, width: 150, height: 180, type: 'cover' },
+                    { x: 800, y: 500, width: 200, height: 300, type: 'cover' },
+                    { x: 350, y: 700, width: 120, height: 150, type: 'cover' },
+                    { x: 1330, y: 450, width: 120, height: 150, type: 'cover' }
+                ],
+                weaponSpawns: [
+                    { x: 600, y: 300, weapon: 'ak47', respawnTime: 30000 },
+                    { x: 1200, y: 300, weapon: 'm4a4', respawnTime: 30000 },
+                    { x: 400, y: 1000, weapon: 'awp', respawnTime: 45000 },
+                    { x: 1400, y: 1000, weapon: 'shotgun', respawnTime: 25000 },
+                    { x: 900, y: 150, weapon: 'sniper', respawnTime: 40000 },
+                    { x: 200, y: 500, weapon: 'ak47', respawnTime: 30000 }
+                ]
             }
+        };
+        
+        // Système ELO et Ranked
+        this.eloSystem = {
+            ranks: [
+                { name: 'Silver I', elo: 0, icon: '🥈', color: '#C0C0C0' },
+                { name: 'Silver II', elo: 150, icon: '🥈', color: '#C8C8C8' },
+                { name: 'Silver III', elo: 300, icon: '🥈', color: '#D0D0D0' },
+                { name: 'Silver IV', elo: 450, icon: '🥈', color: '#D8D8D8' },
+                { name: 'Silver Elite', elo: 600, icon: '🥈', color: '#E0E0E0' },
+                { name: 'Silver Elite Master', elo: 750, icon: '🥈', color: '#E8E8E8' },
+                { name: 'Gold Nova I', elo: 900, icon: '🥇', color: '#FFD700' },
+                { name: 'Gold Nova II', elo: 1050, icon: '🥇', color: '#FFDF00' },
+                { name: 'Gold Nova III', elo: 1200, icon: '🥇', color: '#FFE700' },
+                { name: 'Gold Nova Master', elo: 1350, icon: '🥇', color: '#FFEF00' },
+                { name: 'Master Guardian I', elo: 1500, icon: '⭐', color: '#00FF00' },
+                { name: 'Master Guardian II', elo: 1650, icon: '⭐', color: '#00FF32' },
+                { name: 'Master Guardian Elite', elo: 1800, icon: '⭐', color: '#00FF64' },
+                { name: 'Distinguished Master Guardian', elo: 1950, icon: '💎', color: '#0080FF' },
+                { name: 'Legendary Eagle', elo: 2100, icon: '🦅', color: '#8000FF' },
+                { name: 'Legendary Eagle Master', elo: 2250, icon: '🦅', color: '#9932CC' },
+                { name: 'Supreme Master First Class', elo: 2400, icon: '👑', color: '#FF0080' },
+                { name: 'The Global Elite', elo: 2550, icon: '🌟', color: '#FF4500' }
+            ]
         };
         
         this.camera = { x: 0, y: 0 };
@@ -158,6 +426,172 @@ class Game {
         this.initializeCanvas();
         this.initializeEventListeners();
         this.updateCrosshair();
+        this.loadPlayerELO();
+    }
+    
+    // Charge l'ELO du joueur depuis le localStorage
+    loadPlayerELO() {
+        const savedELO = localStorage.getItem('sio-shooter-elo');
+        this.playerELO = savedELO ? JSON.parse(savedELO) : {
+            elo: 600, // Silver Elite par défaut
+            wins: 0,
+            losses: 0,
+            gamesPlayed: 0,
+            winStreak: 0,
+            bestWinStreak: 0,
+            lastRankUp: null,
+            seasonStats: {
+                kills: 0,
+                deaths: 0,
+                assists: 0,
+                mvps: 0,
+                headshots: 0
+            }
+        };
+    }
+    
+    // Sauvegarde l'ELO du joueur
+    savePlayerELO() {
+        localStorage.setItem('sio-shooter-elo', JSON.stringify(this.playerELO));
+    }
+    
+    // Obtient le rang actuel basé sur l'ELO
+    getCurrentRank() {
+        const ranks = this.eloSystem.ranks;
+        let currentRank = ranks[0];
+        
+        for (let i = ranks.length - 1; i >= 0; i--) {
+            if (this.playerELO.elo >= ranks[i].elo) {
+                currentRank = ranks[i];
+                break;
+            }
+        }
+        
+        return currentRank;
+    }
+    
+    // Calcule le changement d'ELO après une partie
+    calculateELOChange(won, teamAvgELO, enemyAvgELO, mvp = false, performance = 1.0) {
+        const kFactor = this.getKFactor();
+        const expectedScore = 1 / (1 + Math.pow(10, (enemyAvgELO - teamAvgELO) / 400));
+        const actualScore = won ? 1 : 0;
+        
+        let eloChange = Math.round(kFactor * (actualScore - expectedScore));
+        
+        // Bonus pour MVP
+        if (mvp && won) {
+            eloChange += 5;
+        }
+        
+        // Ajustement selon les performances
+        eloChange = Math.round(eloChange * performance);
+        
+        // Limite les changements extrêmes
+        eloChange = Math.max(-50, Math.min(50, eloChange));
+        
+        return eloChange;
+    }
+    
+    // Obtient le facteur K basé sur l'ELO et l'expérience
+    getKFactor() {
+        if (this.playerELO.gamesPlayed < 10) return 50; // Placement matches
+        if (this.playerELO.elo < 1200) return 35; // Rangs inférieurs
+        if (this.playerELO.elo < 2000) return 25; // Rangs moyens
+        return 15; // Rangs élevés
+    }
+    
+    // Met à jour l'ELO après une partie ranked
+    updateELORanked(won, teamAvgELO, enemyAvgELO, stats = {}) {
+        const oldELO = this.playerELO.elo;
+        const oldRank = this.getCurrentRank();
+        
+        // Calcule les performances
+        const kd = (stats.kills || 0) / Math.max(stats.deaths || 1, 1);
+        const performance = Math.min(2.0, Math.max(0.5, kd / 1.2)); // Normalisé autour de 1.2 K/D
+        
+        const eloChange = this.calculateELOChange(won, teamAvgELO, enemyAvgELO, stats.mvp, performance);
+        
+        // Met à jour les stats
+        this.playerELO.elo = Math.max(0, this.playerELO.elo + eloChange);
+        this.playerELO.gamesPlayed++;
+        
+        if (won) {
+            this.playerELO.wins++;
+            this.playerELO.winStreak++;
+            this.playerELO.bestWinStreak = Math.max(this.playerELO.bestWinStreak, this.playerELO.winStreak);
+        } else {
+            this.playerELO.losses++;
+            this.playerELO.winStreak = 0;
+        }
+        
+        // Met à jour les stats de saison
+        if (stats.kills) this.playerELO.seasonStats.kills += stats.kills;
+        if (stats.deaths) this.playerELO.seasonStats.deaths += stats.deaths;
+        if (stats.assists) this.playerELO.seasonStats.assists += stats.assists;
+        if (stats.mvp) this.playerELO.seasonStats.mvps++;
+        if (stats.headshots) this.playerELO.seasonStats.headshots += stats.headshots;
+        
+        const newRank = this.getCurrentRank();
+        
+        // Notification de changement de rang
+        if (newRank.name !== oldRank.name) {
+            const rankUp = newRank.elo > oldRank.elo;
+            this.playerELO.lastRankUp = Date.now();
+            
+            this.showRankChangeNotification(oldRank, newRank, rankUp);
+        }
+        
+        this.savePlayerELO();
+        
+        return {
+            oldELO,
+            newELO: this.playerELO.elo,
+            change: eloChange,
+            oldRank: oldRank.name,
+            newRank: newRank.name,
+            rankChanged: newRank.name !== oldRank.name
+        };
+    }
+    
+    // Affiche une notification de changement de rang
+    showRankChangeNotification(oldRank, newRank, rankUp) {
+        const notification = document.createElement('div');
+        notification.className = `rank-change-notification ${rankUp ? 'rank-up' : 'rank-down'}`;
+        
+        notification.innerHTML = `
+            <div class="rank-change-content">
+                <h2>${rankUp ? '🎉 PROMOTION!' : '😞 RÉTROGRADATION'}</h2>
+                <div class="rank-transition">
+                    <div class="old-rank">
+                        <span class="rank-icon">${oldRank.icon}</span>
+                        <span class="rank-name">${oldRank.name}</span>
+                    </div>
+                    <div class="arrow">${rankUp ? '↗️' : '↘️'}</div>
+                    <div class="new-rank">
+                        <span class="rank-icon">${newRank.icon}</span>
+                        <span class="rank-name">${newRank.name}</span>
+                    </div>
+                </div>
+                <p class="rank-message">
+                    ${rankUp ? 'Félicitations pour votre promotion !' : 'Continuez à vous entraîner !'}
+                </p>
+            </div>
+        `;
+        
+        document.body.appendChild(notification);
+        
+        // Animation d'apparition
+        setTimeout(() => notification.classList.add('show'), 100);
+        
+        // Suppression après 5 secondes
+        setTimeout(() => {
+            notification.classList.remove('show');
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                }
+            }, 500);
+        }, 5000);
     }
 
     // Initialise le canvas

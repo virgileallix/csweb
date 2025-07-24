@@ -781,6 +781,18 @@ class SIOShooterApp {
             this.createParticle(particleContainer);
         }
     }
+
+    // Effets de transition (placeholder)
+    setupTransitionEffects() {
+        // À compléter : effets de transition visuels
+        console.log("Effets de transition initialisés");
+    }
+    
+    // Initialisation des animations (placeholder)
+    initializeAnimations() {
+        // À compléter : initialisation des animations
+        console.log("Animations initialisées");
+    }
     
     // Crée une particule
     createParticle(container) {
