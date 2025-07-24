@@ -44,10 +44,13 @@ body {
     background: var(--bg-dark);
     color: var(--text-primary);
     overflow: hidden;
-    cursor: none;
+    cursor: auto !important;
     user-select: none;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+}
+body.in-game, body.in-game * {
+    cursor: none !important;
 }
 
 /* Curseur personnalisé */
@@ -1908,4 +1911,17 @@ body {
     font-weight: 700;
     z-index: 1500;
     animation: bounceIn 0.6s ease;
+}
+
+input, textarea {
+    caret-color: #fff !important;
+}
+input, textarea, button, select {
+    cursor: text !important;
+}
+input[type="button"], input[type="submit"], button, select {
+    cursor: pointer !important;
+}
+.screen, .screen.active, #lobbyScreen, #menuScreen, #waitingRoom {
+    cursor: auto !important;
 }

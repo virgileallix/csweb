@@ -236,6 +236,13 @@ class MenuManager {
             // Actions spécifiques selon l'écran
             this.onScreenChange(screenName);
         }, 300);
+
+        // Ajout gestion du curseur in-game
+        if (screenName === 'game') {
+            document.body.classList.add('in-game');
+        } else {
+            document.body.classList.remove('in-game');
+        }
     }
 
     // Actions lors du changement d'écran
